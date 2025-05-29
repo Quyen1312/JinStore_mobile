@@ -64,7 +64,7 @@ class UserController extends GetxController {
   Future<void> fetchAddresses() async {
     try {
       isLoading.value = true;
-      final response = await userRepository.address();
+      final response = await userRepository.fetchAddressesByUserId(user.value?.id ?? '');
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> data = response.body['data'];

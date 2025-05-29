@@ -44,7 +44,7 @@ class CategoryController extends GetxController {
       isLoading.value = true;
       // Assuming your API for single category is something like /category/:id
       // You might need to adjust the API constant or method in repository if it's different
-      final response = await categoryRepository.apiClient.getData('${ApiConstants.CATEGORY}/$categoryId');
+      final response = await categoryRepository.apiClient.getData('/category/$categoryId');
       if (response.statusCode == 200 || response.statusCode == 201) {
         singleCategory.value = CategoryModel.fromJson(response.body['data']);
       } else {

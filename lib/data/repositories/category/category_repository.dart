@@ -7,11 +7,11 @@ class CategoryRepository extends GetxService{
   CategoryRepository({required this.apiClient});
 
   Future<Response> allCategoryList() async {
-    return await apiClient.getData(ApiConstants.ALL_CATEGORY);
+      return await apiClient.getData('/category');
   }
 
   Future<Response> category() async {
-    return await apiClient.getData(ApiConstants.CATEGORY);
+    return await apiClient.getData('/category');
   }
 
 

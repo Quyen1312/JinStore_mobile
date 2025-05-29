@@ -26,7 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 // Logo, Title & Sub title
-                LoginHeader(dark: dark),
+                LoginHeader(),
 
                 // Form
                 LoginForm(),

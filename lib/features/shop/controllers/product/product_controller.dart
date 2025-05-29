@@ -41,8 +41,7 @@ class ProductController extends GetxController {
   Future<void> fetchProductsByCategory(String categoryId) async {
     try {
       isLoading.value = true;
-      // Adjust the API call if your repository needs categoryId
-      final response = await productRepository.apiClient.getData('${ApiConstants.PRODUCT_BY_CATEGORY_URI}/$categoryId');
+      final response = await productRepository.apiClient.getData('${ApiConstants.PRODUCT_BY_CATEGORY_URI_BASE}/$categoryId');
       if (response.statusCode == 200 || response.statusCode == 201) {
         final List<dynamic> data = response.body['data'];
         productByCategoryList.value = data.map((item) => ProductModel.fromJson(item)).toList();

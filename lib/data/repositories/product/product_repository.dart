@@ -11,15 +11,15 @@ class ProductRepository extends GetxService{
   }
 
   Future<Response> productByCategoryList() async {
-    return await apiClient.getData(ApiConstants.PRODUCT_BY_CATEGORY_URI);
+    return await apiClient.getData(ApiConstants.PRODUCT_BY_CATEGORY_URI_BASE);
   }
 
   Future<Response> allDiscount() async {
-    return await apiClient.getData(ApiConstants.ALL_DISCOUNT);
+    return await apiClient.getData(ApiConstants.DISCOUNT);
   }
 
    Future<Response> discount() async {
-    return await apiClient.getData(ApiConstants.DISCOUNT);
+    return await apiClient.getData(ApiConstants.SINGLE_DISCOUNT_URI_BASE);
   }
 
 

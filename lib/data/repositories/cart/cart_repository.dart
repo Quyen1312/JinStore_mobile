@@ -7,25 +7,24 @@ class CartRepository extends GetxService{
   CartRepository({required this.apiClient});
 
   Future<Response> cartList() async {
-    return await apiClient.getData(ApiConstants.CART);
+    return await apiClient.getData('/cart');
 
   }
   //delete cart clear all item 
   Future<Response> clearCart() async {
-    return await apiClient.deleteData(ApiConstants.CLEAR_CART, {});
+    return await apiClient.deleteData('/cart', {});
   }
   
 
   //post cart
   Future<Response> addToCart(String productId) async {
-    return await apiClient.postData(ApiConstants.ADD_CART, {
+    return await apiClient.postData('/cart', {
       'product_id': productId,
     });
   }
   //remove item from cart
   Future<Response> removeFromCart(String cartId) async {
-    return await apiClient.deleteData(ApiConstants.REMOVE_CART, {
-      'cart_id': cartId,
+      return await apiClient.deleteData('/cart/$cartId', {
       'quantity': 0,
     });
   }
