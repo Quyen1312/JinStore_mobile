@@ -29,6 +29,7 @@ class AuthRepository extends GetxService {
         if (isEmail) 'email': identifier,
         if (!isEmail) 'username': identifier,
       };
+      print('payload: $payload');
       final response = await apiClient.postData(ApiConstants.LOGIN, payload);
       if (response.statusCode == ApiConstants.SUCCESS || response.statusCode == ApiConstants.CREATED) {
         final token = response.body?['token'];
@@ -39,34 +40,6 @@ class AuthRepository extends GetxService {
       return response;
     } catch (e) {
       return Response(statusCode: ApiConstants.INTERNAL_SERVER_ERROR, statusText: 'Lỗi đăng nhập: ${e.toString()}');
-    }
-  }
-
-  Future<Map<String, dynamic>?> signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
-
-      if (idToken == null) throw Exception('idToken is null');
-
-      final response = await http.post(
-        Uri.parse(ApiConstants.GOOGLE_TOKEN_SIGN_IN),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'idToken': idToken}),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        print('Lỗi từ backend: ${response.statusCode} - ${response.body}');
-        return null;
-      }
-    } catch (e) {
-      print('Lỗi signInWithGoogle: $e');
-      return null;
     }
   }
 

@@ -42,9 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: AppSizes.spaceBtwSections),
 
                 // Footer
-                SocialButtons(onGooglePressed: () {
-                  AuthController.instance.signInWithGoogle();
-                },)
+                SocialButtons()
               ],
             )),
       ),

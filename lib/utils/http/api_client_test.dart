@@ -167,7 +167,6 @@ class ApiClient extends GetConnect implements GetxService {
       print('Headers: $requestHeaders');
       print('Body: $requestBody');
       print('Body Type: ${body.runtimeType}');
-      print(body);
 
       // Thực hiện POST request
       Response response = await post(

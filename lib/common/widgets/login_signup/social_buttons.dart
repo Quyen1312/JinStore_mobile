@@ -4,11 +4,9 @@ import 'package:flutter_application_jin/utils/constants/images.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
 
 class SocialButtons extends StatelessWidget {
-  final VoidCallback onGooglePressed;
 
   const SocialButtons({
     super.key,
-    required this.onGooglePressed,
   });
 
   @override
@@ -22,7 +20,7 @@ class SocialButtons extends StatelessWidget {
             borderRadius: BorderRadius.circular(100),
           ),
           child: IconButton(
-            onPressed: onGooglePressed,
+            onPressed: () {},
             icon: const Image(
               height: AppSizes.iconMd,
               width: AppSizes.iconMd,

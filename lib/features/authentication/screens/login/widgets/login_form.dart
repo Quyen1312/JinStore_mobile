@@ -16,7 +16,6 @@ class LoginForm extends StatelessWidget {
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final RxBool isPasswordVisible = false.obs;
-  final RxBool isRememberMe = false.obs;
 
   @override
   Widget build(BuildContext context) {
@@ -51,26 +50,11 @@ class LoginForm extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSizes.spaceBtwInputFields / 2),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Obx(() => Row(
-                      children: [
-                        Checkbox(
-                          value: isRememberMe.value,
-                          onChanged: (value) => isRememberMe.value = value ?? false,
-                        ),
-                        const Text('Ghi nhớ tôi'),
-                      ],
-                    )),
                 // --- NÚT "QUÊN MẬT KHẨU?" ĐÃ ĐƯỢC BỎ ---
                 // TextButton(
                 //   onPressed: () => Get.to(() => const ForgotPasswordScreen()), // Đảm bảo tên class đúng
                 //   child: const Text('Quên mật khẩu?'),
                 // ),
-              ],
-            ),
-            const SizedBox(height: AppSizes.spaceBtwSections),
             SizedBox(
               width: double.infinity,
               child: Obx(() => authController.isLoading.value
@@ -98,9 +82,9 @@ class LoginForm extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSizes.spaceBtwSections),
-          ],
+          ]
         ),
-      ),
+      )
     );
   }
 }
