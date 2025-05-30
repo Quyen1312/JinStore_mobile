@@ -96,12 +96,15 @@ class OTPScreen extends StatelessWidget {
 
   void _verifyOtp() {
     if (otpCode.value.length == 6 && userId != null) {
-      authController.verifyOTP(VerifyOTPModel(
-        id: '', // The backend might not need an ID for VerifyOTPModel itself
-        user: userId!,
-        otp: otpCode.value,
-        // isEmailVerified and isPhoneVerified are typically set by backend
-      ));
+      authController.verifyOTP(
+        VerifyOTPModel(
+          id: '', // The backend might not need an ID for VerifyOTPModel itself
+          user: userId!,
+          otp: otpCode.value,
+          // isEmailVerified and isPhoneVerified are typically set by backend
+        ),
+        flow: 'emailVerificationAfterRegister', // Added flow parameter
+      );
       // Navigation to HomeScreen or password reset screen should be handled
       // by AuthController based on API response (e.g., via Get.snackbar and Get.to)
     } else if (userId == null) {

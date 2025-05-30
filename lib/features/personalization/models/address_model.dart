@@ -7,7 +7,7 @@ class AddressModel {
   final String? district; // Phường/Xã
   final String? city; // Quận/Huyện
   final String? province; // Tỉnh/Thành phố
-  final bool isDefault;
+  bool isDefault;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 

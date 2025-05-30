@@ -25,7 +25,7 @@ class ProductMetaData extends StatelessWidget {
         Row(
           children: [
             /// Sale Tag
-            if (product.discount > 0)
+            if (product.discount != null && product.discount! > 0)
               Row(
                 children: [
                   /// Actual Price
@@ -42,9 +42,9 @@ class ProductMetaData extends StatelessWidget {
 
             /// Price
             ProductPriceText(
-              price: product.discount > 0
-                  ? (product.price * (1 - product.discount)).toString()
-                  : product.price.toString(),
+              price: product.discount != null && product.discount! > 0
+                  ? (product.price! * (1 - product.discount!)).toString()
+                  : product.price!.toString(),
               isLarge: true,
             ),
           ],
@@ -69,19 +69,6 @@ class ProductMetaData extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSizes.spaceBtwItems / 1.5),
-
-        /// Brand
-        if (product.categoryId != null)
-          Row(
-            children: [
-              CircularImage(
-                image: product.images.isNotEmpty ? product.images[0].url : '',
-                width: 32,
-                height: 32,
-                overlayColor: darkMode ? AppColors.white : AppColors.black,
-              ),
-            ],
-          )
       ],
     );
   }

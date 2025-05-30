@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 class CartItemModel {
-  final String productId; // Maps to _idProduct
+  final String productId; // Ánh xạ tới _idProduct trong Mongoose
   late final int quantity;
 
   CartItemModel({
@@ -9,34 +9,36 @@ class CartItemModel {
     this.quantity = 1,
   });
 
-  // Convert CartItemModel to JSON
+  // Chuyển đổi CartItemModel thành JSON
   Map<String, dynamic> toJson() {
     return {
-      'productId': productId,
+      '_idProduct': productId, // Đã thay đổi 'productId' thành '_idProduct' để khớp với schema
       'quantity': quantity,
     };
   }
 
-  // Create CartItemModel from JSON
+  // Tạo CartItemModel từ JSON
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
     return CartItemModel(
+      // Ưu tiên '_idProduct', sau đó là 'productId' để tương thích
       productId: json['_idProduct']?.toString() ?? json['productId']?.toString() ?? '',
-      quantity: json['quantity'] ?? 1,
+      quantity: json['quantity'] ?? 1, // Mặc định là 1 nếu không có
     );
   }
 
-  // Static empty method
+  // Phương thức tĩnh để tạo một đối tượng trống
   static CartItemModel empty() => CartItemModel(productId: '');
 
-  // Convert to JSON string
+  // Chuyển đổi thành chuỗi JSON
   String toJsonString() => jsonEncode(toJson());
 
-  // Create from JSON string
+  // Tạo từ chuỗi JSON
   static CartItemModel fromJsonString(String jsonString) {
     try {
       return CartItemModel.fromJson(jsonDecode(jsonString));
     } catch (e) {
-      throw FormatException('Invalid JSON string: $e');
+      // Xử lý lỗi nếu chuỗi JSON không hợp lệ
+      throw FormatException('Chuỗi JSON không hợp lệ: $e');
     }
   }
 }

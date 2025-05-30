@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_jin/common/widgets/login_signup/form_divider.dart';
 import 'package:flutter_application_jin/common/widgets/login_signup/social_buttons.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
+import 'package:get/get.dart';
 import '../../../../utils/helpers/helper_functions.dart';
 import 'widgets/signup_form.dart';
 import 'widgets/signup_header.dart';
@@ -36,11 +37,10 @@ class _SignupState extends State<SignupScreen> {
                 const SizedBox(height: AppSizes.spaceBtwSections),
 
                 // Divider
-                FormDivider(dark: dark, dividerText: 'Or Sign up with'),
+                FormDivider(dividerText: 'Or Sign up with'.tr),
                 const SizedBox(height: AppSizes.spaceBtwSections),
 
                 // Footer
-                const SocialButtons(),
               ],
             )),
       ),

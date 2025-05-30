@@ -102,7 +102,7 @@ class ChangeName extends StatelessWidget {
             // Save button
             SizedBox(
               width: double.infinity,
-              child: Obx(() => userController.isLoading.value
+              child: Obx(() => userController.profileLoading.value
                 ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton(
                 onPressed: () async {

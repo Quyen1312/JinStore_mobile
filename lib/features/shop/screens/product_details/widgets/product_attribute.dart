@@ -44,7 +44,7 @@ class ProductAttribute extends StatelessWidget {
                           const SizedBox(width: AppSizes.spaceBtwItems),
 
                           // Actual Price
-                          if (product.discount > 0) ...[
+                          if (product.discount != null && product.discount! > 0) ...[
                             Text(
                               '\$${product.price}',
                               style: Theme.of(context)
@@ -58,10 +58,10 @@ class ProductAttribute extends StatelessWidget {
 
                           // Sale Price
                           ProductPriceText(
-                            price: product.discount > 0
-                                ? (product.price * (1 - product.discount))
+                            price: product.discount != null && product.discount! > 0
+                                ? (product.price! * (1 - product.discount!))
                                     .toString()
-                                : product.price.toString(),
+                                : product.price!.toString(),
                           ),
                         ],
                       ),

@@ -6,12 +6,21 @@ class CategoryRepository extends GetxService{
   final ApiClient apiClient;
   CategoryRepository({required this.apiClient});
 
-  Future<Response> allCategoryList() async {
-      return await apiClient.getData('/category');
+  Future<Response> fetchAllCategory() async {
+    try {
+      final response = await apiClient.getData(ApiConstants.CATEGORIES_BASE);
+      return response;
+    } catch (e) {
+      return Response(statusCode: ApiConstants.INTERNAL_SERVER_ERROR, statusText: 'Lỗi lấy danh sách danh mục: ${e.toString()}');
+    }
   }
-
-  Future<Response> category() async {
-    return await apiClient.getData('/category');
+  Future<Response> fetchCategoryById(String categoryId) async {
+    try {
+      final response = await apiClient.getData('${ApiConstants.CATEGORIES_BASE}/$categoryId');
+      return response;
+    } catch (e) {
+      return Response(statusCode: ApiConstants.INTERNAL_SERVER_ERROR, statusText: 'Lỗi lấy danh sách danh mục: ${e.toString()}');
+    }
   }
 
 

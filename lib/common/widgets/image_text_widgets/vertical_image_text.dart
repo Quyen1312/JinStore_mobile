@@ -34,10 +34,7 @@ class VerticalImageText extends StatelessWidget {
               height: 56,
               padding: const EdgeInsets.all(AppSizes.cardRadiusMd),
               decoration: BoxDecoration(
-                color: backgroundColor ??
-                    (HelperFunctions.isDarkMode(context)
-                        ? AppColors.black
-                        : AppColors.white),
+                color:  AppColors.white,
                 borderRadius: BorderRadius.circular(100),
               ),
               child: Center(
@@ -47,9 +44,6 @@ class VerticalImageText extends StatelessWidget {
                             const Icon(Icons.error),
                         imageUrl: image,
                         fit: BoxFit.cover,
-                        color: HelperFunctions.isDarkMode(context)
-                            ? AppColors.white
-                            : AppColors.black,
                         progressIndicatorBuilder:
                             (context, url, downloadProgress) =>
                                 const ShimmerEffect(
@@ -63,9 +57,7 @@ class VerticalImageText extends StatelessWidget {
                         width: 34,
                         image: AssetImage(image),
                         fit: BoxFit.cover,
-                        color: HelperFunctions.isDarkMode(context)
-                            ? AppColors.white
-                            : AppColors.black),
+                        ),
               ),
             ),
             const SizedBox(

@@ -1,14 +1,22 @@
+import 'dart:convert';
+
 import 'package:flutter_application_jin/features/authentication/models/user_model.dart';
 import 'package:flutter_application_jin/features/authentication/models/verify_otp_model.dart';
 import 'package:flutter_application_jin/utils/constants/api_constants.dart';
 import 'package:flutter_application_jin/utils/http/api_client.dart';
 import 'package:get/get.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthRepository extends GetxService {
   final ApiClient apiClient;
 
   AuthRepository({required this.apiClient});
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+  );
 
   Future<Response> login({
     required String identifier,
@@ -18,109 +26,96 @@ class AuthRepository extends GetxService {
       final isEmail = identifier.contains('@');
       final payload = <String, String>{
         'password': password,
-        // Backend JinStore-API (theo file auth.controller.js) có thể đang mong đợi 'email' hoặc 'username' trực tiếp
-        // chứ không phải 'identifier'. Điều chỉnh payload nếu cần.
-        // Ví dụ, nếu backend chỉ nhận 'email' và 'password':
-        // if (isEmail) 'email': identifier,
-        // else 'username': identifier, // Hoặc backend có thể chỉ hỗ trợ một trong hai
-        // Giả sử backend hỗ trợ cả hai và nhận đúng key 'email' hoặc 'username'
         if (isEmail) 'email': identifier,
         if (!isEmail) 'username': identifier,
       };
-
       final response = await apiClient.postData(ApiConstants.LOGIN, payload);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (response.statusCode == ApiConstants.SUCCESS || response.statusCode == ApiConstants.CREATED) {
         final token = response.body?['token'];
         if (token != null && token is String) {
           await saveUserToken(token);
-          // Không cần lưu user vào SharedPreferences ở đây nữa nếu AuthController sẽ fetch sau.
-          // Hoặc nếu API trả về user, bạn có thể parse và trả về cùng response
-          // Ví dụ, nếu user được trả về trong response.body['user']:
-          // final userData = response.body?['user'];
-          // if (userData != null && userData is Map<String, dynamic>) {
-          //   // Không cần lưu trực tiếp User model ở đây, chỉ cần đảm bảo response.body chứa nó
-          // }
         }
       }
       return response;
     } catch (e) {
-      // Trả về một Response với mã lỗi và thông tin lỗi
-      // để AuthController có thể xử lý và hiển thị thông báo phù hợp.
-      return Response(statusCode: 500, statusText: 'Login error: ${e.toString()}');
+      return Response(statusCode: ApiConstants.INTERNAL_SERVER_ERROR, statusText: 'Lỗi đăng nhập: ${e.toString()}');
+    }
+  }
+
+  Future<Map<String, dynamic>?> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+
+      if (idToken == null) throw Exception('idToken is null');
+
+      final response = await http.post(
+        Uri.parse(ApiConstants.GOOGLE_TOKEN_SIGN_IN),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'idToken': idToken}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        print('Lỗi từ backend: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Lỗi signInWithGoogle: $e');
+      return null;
     }
   }
 
   Future<Response> register(User user) async {
     try {
-      // Đảm bảo user.toJson() gửi đúng các trường mà API register yêu cầu.
-      // Ví dụ, API có thể không cần 'id', 'isAdmin', 'isActive', 'createdAt', 'updatedAt' khi đăng ký.
-      // Bạn có thể tạo một phương thức riêng trong UserModel như toRegisterJson()
-      // hoặc điều chỉnh toJson() cho phù hợp với từng ngữ cảnh.
-      // Hiện tại, chúng ta giữ nguyên user.toJson()
-      return await apiClient.postData(ApiConstants.REGISTER, user.toJson());
+      return await apiClient.postData(ApiConstants.REGISTER, user.toRegisterJson());
     } catch (e) {
-      return Response(statusCode: 500, statusText: 'Registration error: ${e.toString()}');
+      return Response(statusCode: ApiConstants.INTERNAL_SERVER_ERROR, statusText: 'Lỗi đăng ký: ${e.toString()}');
     }
   }
 
   Future<Response> logout() async {
     try {
-      // Không cần gửi token trong body, ApiClient đã tự động thêm vào header
       final response = await apiClient.postData(ApiConstants.LOGOUT, {});
-      // Xóa token sau khi API logout thành công (hoặc bất kể kết quả nếu muốn)
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        await clearToken(); // Tích hợp clearToken vào đây
+      if (response.statusCode == ApiConstants.SUCCESS || response.statusCode == ApiConstants.NO_CONTENT) {
+        await clearToken();
       }
       return response;
     } catch (e) {
-      // Ngay cả khi API logout lỗi, vẫn có thể cân nhắc xóa token cục bộ
-      // await clearToken();
-      return Response(statusCode: 500, statusText: 'Logout error: ${e.toString()}');
-    }
-  }
-
-  Future<Response> resetPassword(String email) async {
-    try {
-      return await apiClient.patchData(ApiConstants.RESET_PASSWORD, {"email": email});
-    } catch (e) {
-      return Response(statusCode: 500, statusText: 'Password reset error: ${e.toString()}');
+      return Response(statusCode: ApiConstants.INTERNAL_SERVER_ERROR, statusText: 'Lỗi đăng xuất: ${e.toString()}');
     }
   }
 
   Future<Response> changePassword(Map<String, dynamic> passwordData) async {
-    // API đổi mật khẩu thường yêu cầu: userId (hoặc lấy từ token), oldPassword, newPassword
-    // Payload của bạn có thể cần điều chỉnh.
-    // Ví dụ: {'oldPassword': '...', 'newPassword': '...'}
-    // User model có thể không phù hợp để gửi trực tiếp ở đây.
     try {
-      return await apiClient.patchData(ApiConstants.CHANGE_PASSWORD, passwordData);
+      return await apiClient.patchData(ApiConstants.USERS_CHANGE_PASSWORD, passwordData);
     } catch (e) {
-      return Response(statusCode: 500, statusText: 'Change password error: ${e.toString()}');
+      return Response(statusCode: ApiConstants.INTERNAL_SERVER_ERROR, statusText: 'Lỗi đổi mật khẩu: ${e.toString()}');
     }
   }
 
   Future<Response> verifyOTP(VerifyOTPModel verifyOTPModel) async {
     try {
-      return await apiClient.postData(ApiConstants.VERIFY_OTP, verifyOTPModel.toJson());
+      return await apiClient.postData(ApiConstants.OTP_VERIFY, verifyOTPModel.toJson());
     } catch (e) {
-      return Response(statusCode: 500, statusText: 'OTP verification error: ${e.toString()}');
+      return Response(statusCode: ApiConstants.INTERNAL_SERVER_ERROR, statusText: 'Lỗi xác thực OTP: ${e.toString()}');
     }
   }
 
   Future<Response> sendOTP(VerifyOTPModel verifyOTPModel) async {
     try {
-      // API gửi OTP có thể chỉ cần email hoặc phone.
-      // VerifyOTPModel hiện tại có vẻ phù hợp cho cả send và verify.
-      return await apiClient.postData(ApiConstants.SEND_OTP, verifyOTPModel.toJson());
+      return await apiClient.postData(ApiConstants.OTP_SEND, verifyOTPModel.toJson());
     } catch (e) {
-      return Response(statusCode: 500, statusText: 'Send OTP error: ${e.toString()}');
+      return Response(statusCode: ApiConstants.INTERNAL_SERVER_ERROR, statusText: 'Lỗi gửi OTP: ${e.toString()}');
     }
   }
 
   Future<bool> saveUserToken(String token) async {
     try {
-      apiClient.token = token;
       apiClient.updateHeader(token);
       final prefs = await SharedPreferences.getInstance();
       return await prefs.setString(ApiConstants.TOKEN, token);
@@ -137,18 +132,30 @@ class AuthRepository extends GetxService {
   Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(ApiConstants.TOKEN);
-    apiClient.token = ''; // Đảm bảo là chuỗi rỗng thay vì null
-    apiClient.updateHeader(''); // Gửi chuỗi rỗng để xóa header
+    apiClient.updateHeader(''); 
   }
 
-  // Thêm phương thức lấy thông tin người dùng sau khi đăng nhập thành công
-  // hoặc khi khởi động ứng dụng nếu đã có token
-  Future<Response> fetchUserInfo() async {
+  Future<Response> fetchCurrentUserInfo() async {
     try {
-      final response = await apiClient.getData(ApiConstants.USER_INFO);
+      final response = await apiClient.getData(ApiConstants.USERS_GET_CURRENT_INFO);
       return response;
     } catch (e) {
-      return Response(statusCode: 500, statusText: 'Fetch user info error: ${e.toString()}');
+      return Response(statusCode: ApiConstants.INTERNAL_SERVER_ERROR, statusText: 'Lỗi lấy thông tin người dùng: ${e.toString()}');
+    }
+  }
+
+  Future<Response> refreshToken() async { 
+    try {
+      final response = await apiClient.postData(ApiConstants.REFRESH_TOKEN, {}); 
+      if (response.statusCode == ApiConstants.SUCCESS) {
+        final newAccessToken = response.body?['token']; 
+        if (newAccessToken != null && newAccessToken is String) {
+          await saveUserToken(newAccessToken);
+        }
+      }
+      return response;
+    } catch (e) {
+      return Response(statusCode: ApiConstants.INTERNAL_SERVER_ERROR, statusText: 'Lỗi làm mới token: ${e.toString()}');
     }
   }
 }

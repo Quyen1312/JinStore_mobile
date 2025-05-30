@@ -2,79 +2,92 @@ class ApiConstants {
   // BASE_URL này phải là địa chỉ và cổng của BACKEND API của bạn
   static const String BASE_URL = "http://localhost:1000/api"; 
 
-  // User related
+  // Authentication
   static const String LOGIN = "/auth/login";
   static const String REGISTER = "/auth/register";
   static const String LOGOUT = "/auth/logout";
-  static const String USER_INFO = "/user/info-user"; // Endpoint để lấy thông tin user hiện tại (qua token)
-                                          // Hoặc có thể là /auth/me, /users/profile tùy theo backend
-  static const String EDIT_INFO_USER = "/users/info-user/update"; // Cần sửa: không hardcode ID
-                                                                            // Nên là "/user" hoặc "/users/update" (PUT)
-  // OTP
-  static const String VERIFY_OTP = "/otp/verify-otp";
-  static const String SEND_OTP = "/otp/send-otp"; // Để gửi/gửi lại OTP
+  static const String AUTH_LOGIN_SUCCESS = "/auth/login/success"; // Dùng cho OAuth redirects
+  static const String AUTH_GOOGLE = "/auth/google";
+  static const String AUTH_GOOGLE_CALLBACK = "/auth/google/callback";
+  static const String REFRESH_TOKEN = "/auth/refresh"; 
+  static const String GOOGLE_TOKEN_SIGN_IN = "/auth/google/token-signin";
 
-  // Password // Endpoint backend cho quên mật khẩu
-  static const String RESET_PASSWORD = "/users/reset-password";   // Endpoint backend cho đặt lại mật khẩu mới
-  static const String CHANGE_PASSWORD = "/users/change-password"; // Endpoint backend để user tự đổi mật khẩu khi đã đăng nhập
+  // User related API Endpoints
+  static const String USERS_BASE_PATH = "/users"; 
+  static const String USERS_GET_CURRENT_INFO = "/users/info-user";   // GET (Lấy thông tin user hiện tại qua token)
+  static const String USERS_UPDATE_CURRENT_INFO = "/users/info-user/update"; // PATCH (User tự cập nhật thông tin)
+  
+  // Password Management for logged-in user
+  static const String USERS_CHANGE_PASSWORD = "/users/change-password";  // PATCH (User đã đăng nhập tự đổi mật khẩu)
 
-  // Products
-  static const String ALL_PRODUCT_URI = "/products"; // Để lấy tất cả sản phẩm
-  static const String PRODUCT_BY_CATEGORY_URI_BASE = "/products/category"; // Đường dẫn cơ sở để lấy sản phẩm theo categoryId (GET /products/category/:categoryId)
-  // static const String PRODUCT_DETAIL_URI = "/products"; // Nếu lấy chi tiết là GET /products/:productId
+  // --- Chức năng Quên Mật Khẩu đã được BỎ ---
+  // static const String FORGET_PASSWORD_REQUEST = "/auth/forgot-password"; 
+  // static const String COMPLETE_PASSWORD_RESET = "/users/reset-password";    
 
-  // Categories
-  static const String ALL_CATEGORY_URI = "/categories"; // Lấy tất cả category
-  // static const String CATEGORY_DETAIL_URI = "/category"; // Nếu lấy chi tiết là GET /category/:categoryId
+  // OTP Verification (/api/otp) - Vẫn giữ lại nếu OTP được dùng cho mục đích khác (ví dụ: xác thực đăng ký)
+  static const String OTP_SEND = "/otp/send-otp";                  // POST
+  static const String OTP_VERIFY = "/otp/verify-otp";                // POST
 
-  // Discounts / Coupons
-  static const String DISCOUNT = "/discounts/all"; // Lấy tất cả discount
-  static const String SINGLE_DISCOUNT_URI_BASE = "/discounts/single"; // URI cơ sở cho GET /discounts/single/:discountId
-                                                                   // (ApiConstants.ALL_DISCOUNT cũ là "/discounts/single/65eef68a023a14930c0e8159")
-  // Endpoint lấy coupon của user (qua token)
+  // Products (/api/products)
+  static const String PRODUCTS_GET_ALL = "/products/";               // GET (Lấy tất cả sản phẩm)
+  static const String PRODUCTS_BASE = "/products";                 // Base cho GET /products/:id
+  static const String PRODUCTS_BY_CATEGORY_BASE = "/products/category";  // GET /products/category/:idCategory
 
+  // Categories (/api/categories)
+  static const String CATEGORIES_GET_ALL = "/categories/";           // GET (Lấy tất cả danh mục)
+  static const String CATEGORIES_BASE = "/categories";             // Base cho GET /categories/:id
 
-  // Addresses
-  static const String ADDRESSES_BY_USER_BASE_URI = "/addresses/user/all"; // Đường dẫn cơ sở để lấy địa chỉ theo userId (GET /addresses/user/:userId)
-  static const String ADD_ADDRESS_URI = "/addresses/add"; // Endpoint để thêm địa chỉ mới (POST /addresses/)
-                                                       // (ApiConstants.ADD_ADDRESS cũ là "/addresses/add")
-  static const String SET_DEFAULT_ADDRESS_BASE_URI = "/addresses"; // (PATCH /addresses/:addressId/set-default)
-  // static const String DELETE_ADDRESS_BASE_URI = "/addresses";    // (DELETE /addresses/:addressId)
-  // static const String UPDATE_ADDRESS_BASE_URI = "/addresses";    // (PUT /addresses/:addressId)
+  // Discounts (/api/discounts)
+  static const String DISCOUNTS_GET_ALL = "/discounts/all";          // GET
+  static const String DISCOUNTS_BASE = "/discounts";                 // Base cho GET /discounts/:id
 
+  // Reviews (/api/reviews)
+  static const String REVIEWS_CREATE = "/reviews/";                // POST (Tạo review mới)
+  static const String REVIEWS_GET_CURRENT_USER = "/reviews/user";    // GET (Lấy review của user đã đăng nhập)
+  static const String REVIEWS_BY_PRODUCT_ID_BASE = "/reviews/product"; // GET /reviews/product/:productId
+  static const String REVIEWS_UPDATE_BASE = "/reviews/update";       // PATCH /reviews/update/:reviewId (User cập nhật review của mình)
+  static const String REVIEWS_DELETE_BASE = "/reviews/delete";       // DELETE /reviews/delete/:reviewId (User xóa review của mình)
 
-  // Orders
-  static const String ORDERS_BY_USER_URI = "/orders/user";    // Endpoint lấy orders của user (qua token hoặc userId)
-  static const String CREATE_ORDER_URI = "/orders/create";    // Endpoint tạo order mới
-  // static const String ORDER_DETAIL_URI = "/orders";      // Nếu lấy chi tiết order là GET /orders/:orderId
+  // Addresses (/api/addresses)
+  static const String ADDRESSES_GET_ALL_CURRENT_USER = "/addresses/user/all"; 
+  static const String ADDRESSES_BASE = "/addresses";                 
+  static const String ADDRESSES_ADD = "/addresses/add";              
+  static const String ADDRESSES_SET_DEFAULT_BASE = "/addresses";     
+  static const String ADDRESSES_ACTION_SET_DEFAULT = "/set-default"; 
 
+  // Cart (/api/carts)
+  static const String CART_GET_USER = "/carts/";                   
+  static const String CART_ADD_ITEM = "/carts/add";                
+  static const String CART_UPDATE_ITEM = "/carts/update";            
+  static const String CART_REMOVE_ITEM_BASE = "/carts/remove";       
+  static const String CART_CLEAR = "/carts/clear";                 
 
-  // Cart
-  static const String CART_URI = "/cart"; // Endpoint chính cho cart (GET, POST, PUT, DELETE tùy theo action)
-                                        // Ví dụ: GET /cart (lấy giỏ hàng của user qua token)
-                                        // POST /cart (thêm sản phẩm vào giỏ)
-                                        // PUT /cart/item/:itemId (cập nhật số lượng)
-                                        // DELETE /cart/item/:itemId (xóa item)
+  // Orders (/api/orders)
+  static const String ORDERS_CREATE = "/orders/create";              
+  static const String ORDERS_GET_CURRENT_USER = "/orders/my-order";  
+  static const String ORDERS_GET_DETAILS_BASE = "/orders/details";   
 
-  // Payment Methods
-  static const String PAYMENT_METHODS_URI = "/payment-methods"; // Lấy danh sách phương thức thanh toán
+  // Payments (/api/payments)
+  static const String PAYMENTS_VNPAY_CREATE_URL = "/payments/vnpay/create_url"; 
+  static const String PAYMENTS_VNPAY_RETURN_URL = "/payments/vnpay/return_url"; 
 
-  // SharedPreferences Keys
+  // --- SharedPreferences Keys ---
   static const String TOKEN = 'token';
   static const String IS_FIRST_TIME = 'IsFirstTime';
-  static const String USER_ID = 'userId'; // Key để lưu user ID nếu cần
+  static const String USER_ID = 'userId'; 
 
-  // API Status
+  // --- API Status Codes ---
   static const int SUCCESS = 200;
   static const int CREATED = 201;
+  static const int NO_CONTENT = 204;
   static const int BAD_REQUEST = 400;
   static const int UNAUTHORIZED = 401;
   static const int FORBIDDEN = 403;
-  static const String NOT_FOUND = "404"; // Giữ lại kiểu String nếu bạn parse string, hoặc int nếu parse int
+  static const int NOT_FOUND = 404; 
   static const int CONFLICT = 409;
   static const int INTERNAL_SERVER_ERROR = 500;
 
-  // Headers
+  // --- Headers ---
   static const String HEADER_CONTENT_TYPE = 'Content-Type';
   static const String APPLICATION_JSON = 'application/json';
 }

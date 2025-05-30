@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_jin/features/authentication/screens/login/login.dart';
+import 'package:flutter_application_jin/features/authentication/screens/signup/signup.dart';
 import 'package:flutter_application_jin/features/authentication/screens/splash/splash_screen.dart'; // Đảm bảo đường dẫn này chính xác
+import 'package:flutter_application_jin/features/shop/screens/home/home.dart';
 import 'package:flutter_application_jin/utils/helpers/dependencies.dart' as dep; // Alias cho dependencies
 import 'package:flutter_application_jin/utils/theme/theme.dart'; // Import theme của bạn
 import 'package:get/get.dart';
@@ -41,7 +44,18 @@ class App extends StatelessWidget {
       // --- Màn hình bắt đầu ---
       // Đặt SplashScreen làm màn hình home ban đầu.
       // SplashController sẽ xử lý logic điều hướng dựa trên trạng thái đăng nhập.
-      home: SplashScreen(), 
+      getPages: AppRoutes.routes,
+      home: const HomeScreen(), 
     );
   }
+}
+
+class AppRoutes {
+  static final routes = [
+    GetPage(name: '/', page: () =>  SplashScreen()), // Hoặc màn hình Login nếu không có Splash
+    GetPage(name: '/login', page: () =>  LoginScreen()),
+    GetPage(name: '/signup', page: () => const SignupScreen()),
+    GetPage(name: '/home', page: () => const HomeScreen()), // Đảm bảo tên và widget đúng
+    // ... các routes khác
+  ];
 }
