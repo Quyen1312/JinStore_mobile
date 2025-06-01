@@ -1,8 +1,5 @@
 // File: lib/features/shop/models/product_model.dart
-import 'package:flutter_application_jin/features/shop/models/category_nested_model.dart';
-import 'package:flutter_application_jin/features/shop/models/review_model.dart';
 
-// Giả định ImageModel và ProductInformation được định nghĩa ở đây hoặc import
 class ImageModel {
   final String url;
   final String? publicId;
@@ -15,6 +12,7 @@ class ImageModel {
       publicId: json['publicId'] as String?,
     );
   }
+  
   Map<String, dynamic> toJson() => {
         'url': url,
         if (publicId != null) 'publicId': publicId,
@@ -24,21 +22,18 @@ class ImageModel {
 class ProductInformation {
   final String key;
   final String value;
-
+  
   ProductInformation({required this.key, required this.value});
-
+  
   factory ProductInformation.fromJson(Map<String, dynamic> json) {
     return ProductInformation(
       key: json['key'] as String? ?? '',
       value: json['value'] as String? ?? '',
     );
   }
-  Map<String, dynamic> toJson() => {
-        'key': key,
-        'value': value,
-      };
+  
+  Map<String, dynamic> toJson() => {'key': key, 'value': value};
 }
-
 
 class ProductModel {
   final String id;
@@ -46,17 +41,27 @@ class ProductModel {
   final String description;
   final double price;
   final String unit;
-  final double? discount; // Backend lưu là Number, có thể là 0
+  final double discount;
   final int quantity;
-  final CategoryNestedModel? category; // Sẽ là object Category được populate
+  final int countBuy;
+  
+  final String? categoryId; // Từ _idCategory
+  final String? categoryName; // Nếu populate category
+  
   final List<ImageModel> images;
   final List<ProductInformation> information;
-  final List<ReviewModel>? reviews; // Sẽ là list ReviewModel được populate (từ getProductByIdCategory)
+  
+  // Thay đổi: _idReview là singular trong schema, không phải array
+  final String? reviewId; // Từ _idReview trong Mongoose
+  
+  final double averageRating;
   final bool isActive;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
-  // averageRating không có trong schema backend, có thể tính ở client hoặc backend thêm vào
-  final double averageRating; // Giả sử tính toán ở client hoặc backend gửi
+  
+  // Loại bỏ isFeatured vì không có trong schema
+  // Bạn có thể thêm logic để determine featured products khác
+  
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   ProductModel({
     required this.id,
@@ -64,71 +69,175 @@ class ProductModel {
     required this.description,
     required this.price,
     required this.unit,
-    this.discount,
+    required this.discount,
     required this.quantity,
-    this.category,
-    this.images = const [],
-    this.information = const [],
-    this.reviews,
-    this.isActive = true,
-    this.createdAt,
-    this.updatedAt,
-    this.averageRating = 0.0,
+    required this.countBuy,
+    this.categoryId,
+    this.categoryName,
+    required this.images,
+    required this.information,
+    this.reviewId, // Singular, not array
+    required this.averageRating,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
+  // Getter để check nếu product là featured (có thể dựa trên logic business)
+  bool get isFeatured {
+    // Ví dụ logic: sản phẩm có averageRating >= 4.0 hoặc countBuy > 100
+    return averageRating >= 4.0 || countBuy > 100;
+  }
+
+  // Getter để check nếu sản phẩm available
+  bool get isAvailable {
+    return isActive && quantity > 0;
+  }
+
   factory ProductModel.fromJson(Map<String, dynamic> json) {
-    var populatedCategory = json['_idCategory'] != null && json['_idCategory'] is Map<String, dynamic>
-        ? CategoryNestedModel.fromJson(json['_idCategory'] as Map<String, dynamic>)
-        : null;
-    
-    // Nếu _idCategory chỉ là String ID (trường hợp không populate sâu), bạn có thể muốn xử lý khác
-    // nhưng dựa trên backend controller, nó sẽ luôn là object khi populate được gọi.
-    if (json['_idCategory'] is String && populatedCategory == null) {
-        // Xử lý trường hợp _idCategory là String ID (ví dụ: tạo CategoryNestedModel chỉ với ID)
-        // populatedCategory = CategoryNestedModel(id: json['_idCategory'], name: 'Unknown');
-        // Hoặc bạn có thể có một trường categoryId riêng: final String categoryId;
+    // Hàm helper để parse int một cách an toàn
+    int _parseInt(dynamic value, {int defaultValue = 0}) {
+      if (value == null) return defaultValue;
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? defaultValue;
+      return defaultValue;
     }
 
-    List<ReviewModel>? populatedReviews;
-    if (json['_idReview'] != null && json['_idReview'] is List) {
-      populatedReviews = (json['_idReview'] as List<dynamic>)
-          .map((reviewData) => ReviewModel.fromJson(reviewData as Map<String, dynamic>))
-          .toList();
-    }
-    
-    // Tính averageRating nếu có reviews và API không trả về sẵn
-    double calculatedAverageRating = 0.0;
-    if (populatedReviews != null && populatedReviews.isNotEmpty) {
-      calculatedAverageRating = populatedReviews.map((r) => r.rating).reduce((a, b) => a + b) / populatedReviews.length;
-    } else if (json['averageRating'] != null) { // Nếu API có trả về averageRating
-        calculatedAverageRating = (json['averageRating'] as num?)?.toDouble() ?? 0.0;
+    // Hàm helper để parse double một cách an toàn
+    double _parseDouble(dynamic value, {double defaultValue = 0.0}) {
+      if (value == null) return defaultValue;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? defaultValue;
+      return defaultValue;
     }
 
+    // Hàm helper để parse boolean an toàn
+    bool _parseBool(dynamic value, {bool defaultValue = false}) {
+      if (value == null) return defaultValue;
+      if (value is bool) return value;
+      if (value is String) {
+        return value.toLowerCase() == 'true' || value == '1';
+      }
+      if (value is int) return value == 1;
+      return defaultValue;
+    }
+
+    // Hàm helper để parse String từ ObjectId hoặc String
+    String? _parseObjectIdToString(dynamic value) {
+      if (value == null) return null;
+      if (value is String) return value;
+      if (value is Map<String, dynamic> && value.containsKey('\$oid')) {
+        return value['\$oid'] as String;
+      }
+      return value.toString();
+    }
+
+    // Hàm helper để parse DateTime
+    DateTime _parseDateTime(dynamic value, {DateTime? defaultValue}) {
+      if (value == null) return defaultValue ?? DateTime.now();
+      if (value is DateTime) return value;
+      if (value is String) {
+        return DateTime.tryParse(value) ?? (defaultValue ?? DateTime.now());
+      }
+      if (value is Map<String, dynamic> && value.containsKey('\$date')) {
+        String dateStr = value['\$date'] as String;
+        return DateTime.tryParse(dateStr) ?? (defaultValue ?? DateTime.now());
+      }
+      return defaultValue ?? DateTime.now();
+    }
+    
+    // Xử lý categoryId và categoryName
+    String? catId;
+    String? catName;
+    
+    if (json['_idCategory'] != null) {
+      var categoryData = json['_idCategory'];
+      if (categoryData is String) {
+        catId = categoryData;
+      } else if (categoryData is Map<String, dynamic>) {
+        // Nếu category được populate
+        catId = _parseObjectIdToString(categoryData['_id']);
+        catName = categoryData['name'] as String?;
+      } else {
+        catId = _parseObjectIdToString(categoryData);
+      }
+    }
+
+    // Parse images array
+    List<ImageModel> parsedImages = [];
+    if (json['images'] != null && json['images'] is List) {
+      for (var imageData in json['images'] as List<dynamic>) {
+        try {
+          if (imageData is Map<String, dynamic>) {
+            parsedImages.add(ImageModel.fromJson(imageData));
+          }
+        } catch (e) {
+          print('[WARNING] Failed to parse image: $e');
+        }
+      }
+    }
+
+    // Parse information array
+    List<ProductInformation> parsedInformation = [];
+    if (json['information'] != null && json['information'] is List) {
+      for (var infoData in json['information'] as List<dynamic>) {
+        try {
+          if (infoData is Map<String, dynamic>) {
+            parsedInformation.add(ProductInformation.fromJson(infoData));
+          }
+        } catch (e) {
+          print('[WARNING] Failed to parse information: $e');
+        }
+      }
+    }
 
     return ProductModel(
-      id: json['_id'] as String? ?? json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
+      id: _parseObjectIdToString(json['_id']) ?? '',
+      name: json['name'] as String? ?? 'Sản phẩm không tên',
       description: json['description'] as String? ?? '',
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      price: _parseDouble(json['price']),
       unit: json['unit'] as String? ?? '',
-      discount: (json['discount'] as num?)?.toDouble(), // Có thể là 0 hoặc null
-      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
-      category: populatedCategory,
-      images: (json['images'] as List<dynamic>?)
-              ?.map((imgJson) => ImageModel.fromJson(imgJson as Map<String, dynamic>))
-              .toList() ??
-          [],
-      information: (json['information'] as List<dynamic>?)
-              ?.map((infoJson) => ProductInformation.fromJson(infoJson as Map<String, dynamic>))
-              .toList() ??
-          [],
-      reviews: populatedReviews,
-      isActive: json['isActive'] as bool? ?? true,
-      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt'].toString()) : null,
-      averageRating: calculatedAverageRating,
+      discount: _parseDouble(json['discount']),
+      quantity: _parseInt(json['quantity']),
+      countBuy: _parseInt(json['countBuy']),
+      
+      categoryId: catId,
+      categoryName: catName,
+
+      images: parsedImages,
+      information: parsedInformation,
+      
+      // _idReview là singular trong schema
+      reviewId: _parseObjectIdToString(json['_idReview']),
+      
+      averageRating: _parseDouble(json['averageRating']),
+      isActive: _parseBool(json['isActive'], defaultValue: true),
+      
+      createdAt: _parseDateTime(json['createdAt']),
+      updatedAt: _parseDateTime(json['updatedAt']),
     );
   }
 
-  // toJson không cần thiết cho app user nếu chỉ fetch sản phẩm
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'name': name,
+      'description': description,
+      'price': price,
+      'unit': unit,
+      'discount': discount,
+      'quantity': quantity,
+      'countBuy': countBuy,
+      'averageRating': averageRating,
+      'isActive': isActive,
+      'images': images.map((img) => img.toJson()).toList(),
+      'information': information.map((info) => info.toJson()).toList(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      if (categoryId != null) '_idCategory': categoryId,
+      if (reviewId != null) '_idReview': reviewId,
+    };
+  }
 }

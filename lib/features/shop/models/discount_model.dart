@@ -1,91 +1,122 @@
-// File: lib/features/shop/models/discount_model.dart
-// (Hoặc một đường dẫn phù hợp cho model của bạn)
-
-class DiscountModel {
-  final String id; // MongoDB sẽ có _id, chúng ta map nó thành id
+class Discount {
+  final String id;
   final String code;
-  final String type; // 'fixed' hoặc 'percentage'
-  final double? value; // Chỉ có giá trị nếu type là 'fixed'
-  final double? maxPercent; // Chỉ có giá trị nếu type là 'percentage', Mongoose để Number nhưng % thường là int (0-100)
-  final DateTime activationDate;
-  final DateTime expirationDate;
-  final bool isActive;
+  final String type;
+  final double value;
   final double minOrderAmount;
-  final int quantityLimit;
-  final int quantityUsed;
+  final DateTime startDate;
+  final DateTime endDate;
+  final int? usageLimit;
+  final int usageCount;
+  final List<String>? applicableProducts;
+  final List<String>? applicableCategories;
+  final bool isActive;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  DiscountModel({
+  Discount({
     required this.id,
     required this.code,
     required this.type,
-    this.value,
-    this.maxPercent,
-    required this.activationDate,
-    required this.expirationDate,
-    this.isActive = false,
-    this.minOrderAmount = 0,
-    this.quantityLimit = 100,
-    this.quantityUsed = 0,
+    required this.value,
+    required this.minOrderAmount,
+    required this.startDate,
+    required this.endDate,
+    this.usageLimit,
+    required this.usageCount,
+    this.applicableProducts,
+    this.applicableCategories,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
-  factory DiscountModel.fromJson(Map<String, dynamic> json) {
-    return DiscountModel(
-      id: json['_id'] as String? ?? json['id'] as String? ?? '', // Backend thường trả về _id
-      code: json['code'] as String? ?? '',
-      type: json['type'] as String? ?? 'fixed', // Mặc định nếu null, hoặc đảm bảo backend luôn gửi
-      value: (json['value'] as num?)?.toDouble(), // Nullable, chỉ tồn tại khi type là 'fixed'
-      maxPercent: (json['maxPercent'] as num?)?.toDouble(), // Nullable, chỉ tồn tại khi type là 'percentage'
-      activationDate: DateTime.tryParse(json['activationDate'] ?? json['activation'] ?? '') ?? DateTime.now(), // Xử lý cả 'activationDate' và 'activation'
-      expirationDate: DateTime.tryParse(json['expirationDate'] ?? json['expiration'] ?? '') ?? DateTime.now().add(const Duration(days: 30)), // Xử lý cả 'expirationDate' và 'expiration'
-      isActive: json['isActive'] as bool? ?? false,
-      minOrderAmount: (json['minOrderAmount'] as num?)?.toDouble() ?? 0.0,
-      quantityLimit: (json['quantityLimit'] as num?)?.toInt() ?? 100,
-      quantityUsed: (json['quantityUsed'] as num?)?.toInt() ?? 0,
+  factory Discount.fromJson(Map<String, dynamic> json) {
+    return Discount(
+      id: json['_id'],
+      code: json['code'],
+      type: json['type'],
+      value: json['value'].toDouble(),
+      minOrderAmount: json['minOrderAmount'].toDouble(),
+      startDate: DateTime.parse(json['startDate']),
+      endDate: DateTime.parse(json['endDate']),
+      usageLimit: json['usageLimit'],
+      usageCount: json['usageCount'],
+      applicableProducts: json['applicableProducts'] != null
+          ? List<String>.from(json['applicableProducts'])
+          : null,
+      applicableCategories: json['applicableCategories'] != null
+          ? List<String>.from(json['applicableCategories'])
+          : null,
+      isActive: json['isActive'],
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: DateTime.parse(json['updatedAt']),
     );
   }
 
-  // toJson method nếu bạn cần gửi dữ liệu DiscountModel lên server (ví dụ: admin tạo discount)
-  // Đối với app user thường chỉ nhận dữ liệu này.
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {
+    return {
+      '_id': id,
       'code': code,
       'type': type,
-      'activationDate': activationDate.toIso8601String(),
-      'expirationDate': expirationDate.toIso8601String(),
-      'isActive': isActive,
+      'value': value,
       'minOrderAmount': minOrderAmount,
-      'quantityLimit': quantityLimit,
-      'quantityUsed': quantityUsed,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+      'usageLimit': usageLimit,
+      'usageCount': usageCount,
+      'applicableProducts': applicableProducts,
+      'applicableCategories': applicableCategories,
+      'isActive': isActive,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
-    if (id.isNotEmpty) { // Không gửi id nếu là tạo mới và id do backend tạo
-        // data['_id'] = id; // Hoặc data['id'] = id; tùy theo backend mong đợi
-    }
-    if (type == 'fixed' && value != null) {
-      data['value'] = value;
-    }
-    if (type == 'percentage' && maxPercent != null) {
-      data['maxPercent'] = maxPercent;
-    }
-    return data;
   }
 
-  // Helper getter để kiểm tra xem discount có còn hiệu lực không (chưa hết hạn và còn số lượng)
+  Discount copyWith({
+    String? id,
+    String? code,
+    String? type,
+    double? value,
+    double? minOrderAmount,
+    DateTime? startDate,
+    DateTime? endDate,
+    int? usageLimit,
+    int? usageCount,
+    List<String>? applicableProducts,
+    List<String>? applicableCategories,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Discount(
+      id: id ?? this.id,
+      code: code ?? this.code,
+      type: type ?? this.type,
+      value: value ?? this.value,
+      minOrderAmount: minOrderAmount ?? this.minOrderAmount,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      usageLimit: usageLimit ?? this.usageLimit,
+      usageCount: usageCount ?? this.usageCount,
+      applicableProducts: applicableProducts ?? this.applicableProducts,
+      applicableCategories: applicableCategories ?? this.applicableCategories,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   bool get isValid {
     final now = DateTime.now();
     return isActive &&
-        now.isAfter(activationDate) &&
-        now.isBefore(expirationDate) &&
-        quantityUsed < quantityLimit;
+        now.isAfter(startDate) &&
+        now.isBefore(endDate) &&
+        (usageLimit == null || usageCount < usageLimit!);
   }
 
-  // Helper getter để hiển thị giá trị giảm giá
-  String get displayValue {
-    if (type == 'percentage' && maxPercent != null) {
-      return '${maxPercent?.toStringAsFixed(0)}%'; // Bỏ phần thập phân nếu là số nguyên
-    } else if (type == 'fixed' && value != null) {
-      // Bạn có thể cần định dạng tiền tệ ở đây
-      return '${value?.toStringAsFixed(0)} VND'; // Ví dụ
-    }
-    return '';
+  double calculateDiscount(double amount) {
+    if (!isValid || amount < minOrderAmount) return 0;
+    return type == 'percentage' ? amount * value / 100 : value;
   }
-}
+} 

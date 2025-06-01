@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_application_jin/features/shop/controllers/cart/cart_controller.dart'; // Import CartController
+import 'package:flutter/material.dart'; 
+import 'package:flutter_application_jin/features/shop/controllers/cart_controller.dart';
 import 'package:flutter_application_jin/utils/constants/colors.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:flutter_application_jin/features/shop/screens/cart/cart.dart'; // Đường dẫn đến CartScreen
+import 'package:flutter_application_jin/features/shop/screens/cart/cart.dart';
 
 class CartCounterIcon extends StatelessWidget {
   const CartCounterIcon({

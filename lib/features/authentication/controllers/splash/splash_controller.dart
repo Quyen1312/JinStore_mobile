@@ -1,6 +1,11 @@
+// File: lib/features/authentication/controllers/splash/splash_controller.dart
+import 'package:flutter/material.dart'; // Import Material để dùng WidgetsBinding
 import 'package:flutter_application_jin/features/authentication/controllers/auth/auth_controller.dart';
 import 'package:flutter_application_jin/features/authentication/screens/onboarding/onboarding.dart';
+import 'package:flutter_application_jin/features/authentication/screens/login/login.dart';
+import 'package:flutter_application_jin/features/shop/screens/home/home.dart'; // Đảm bảo import HomeScreen
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
 
 class SplashController extends GetxController {
   static SplashController get instance => Get.find();
@@ -8,22 +13,36 @@ class SplashController extends GetxController {
   @override
   void onReady() {
     super.onReady();
-    _navigateToAppropriateScreen();
+    // Sử dụng addPostFrameCallback để đảm bảo navigation xảy ra sau khi frame đầu tiên đã build xong
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _navigateToAppropriateScreen();
+    });
   }
 
   Future<void> _navigateToAppropriateScreen() async {
-    // Bạn có thể thêm một khoảng delay nhỏ ở đây nếu muốn splash screen hiển thị lâu hơn một chút
-    // await Future.delayed(const Duration(milliseconds: 1500)); // Ví dụ: 1.5 giây
+    // Đảm bảo AuthController đã được đăng ký
+    if (!Get.isRegistered<AuthController>()) {
+      printError(info: "CRITICAL ERROR: AuthController is not registered in SplashController.");
+      // Ngay cả khi fallback, vẫn nên có một delay nhỏ để tránh lỗi navigator locked nếu có// Delay nhỏ
+      Get.offAll(() => const OnBoardingScreen());
+      return;
+    }
 
-    // Gọi hàm kiểm tra trạng thái đăng nhập và điều hướng từ AuthController
-    // Đảm bảo AuthController.instance đã được khởi tạo (ví dụ thông qua Get.put trong dependencies.dart)
-    if (Get.isRegistered<AuthController>()) {
-      await AuthController.instance.checkLoginStatusAndNavigate();
+    // Sau khi cả hai tác vụ hoàn tất, tiến hành điều hướng
+    if (AuthController.instance.isLoggedIn.value) {
+      // Người dùng đã đăng nhập
+      Get.offAll(() => const HomeScreen());
     } else {
-      // Xử lý trường hợp AuthController chưa được đăng ký, có thể là lỗi khởi tạo dependencies
-      printError(info: "AuthController is not registered.");
-      // Có thể điều hướng đến một màn hình lỗi hoặc màn hình đăng nhập mặc định
-       Get.offAll(() => const OnBoardingScreen());
+      // Người dùng chưa đăng nhập, kiểm tra cờ isFirstTime
+      final prefs = await SharedPreferences.getInstance();
+      // Sử dụng key nhất quán, ví dụ 'isFirstTimeUser' hoặc 'hasCompletedOnboarding'
+      final isFirstTime = prefs.getBool('isFirstTimeUser') ?? true;
+
+      if (isFirstTime) {
+        Get.offAll(() => const OnBoardingScreen());
+      } else {
+        Get.offAll(() => LoginScreen()); // Hoặc const LoginScreen()
+      }
     }
   }
 }

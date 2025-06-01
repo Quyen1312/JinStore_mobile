@@ -1,72 +1,131 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_jin/common/widgets/products/cart/add_remove_button.dart';
-import 'package:flutter_application_jin/common/widgets/products/cart/cart_item.dart'; // Đổi tên thành CartItemWidget
-import 'package:flutter_application_jin/common/widgets/texts/product_price_text.dart';
-import 'package:flutter_application_jin/features/shop/controllers/cart/cart_controller.dart'; // Import CartController
-import 'package:flutter_application_jin/features/shop/models/cart_item_model.dart'; // Import CartItemModel
+import 'package:flutter_application_jin/common/widgets/products/cart/cart_item.dart';
+import 'package:flutter_application_jin/features/shop/controllers/cart_controller.dart';
+import 'package:flutter_application_jin/features/shop/models/cart_item_model.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
 import 'package:get/get.dart';
 
 class CartItems extends StatelessWidget {
-  const CartItems({
-    super.key, 
-    this.showAddRemoveButton = true,
-  });
-
-  final bool showAddRemoveButton;
+  const CartItems({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final cartController = CartController.instance;
+    final controller = CartController.instance;
 
     return Obx(() {
-      if (cartController.cartItems.isEmpty) {
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSizes.spaceBtwSections),
-            child: Text('Giỏ hàng của bạn đang trống!', style: Theme.of(context).textTheme.titleMedium),
-          ),
-        );
-      }
+      final items = controller.cart['items'] as List? ?? [];
       
+      if (items.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
       return ListView.separated(
         shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(), // Nếu CartItems nằm trong SingleChildScrollView khác
-        separatorBuilder: (_, __) => const SizedBox(height: AppSizes.spaceBtwSections),
-        itemCount: cartController.cartItems.length,
-        itemBuilder: (_, index) {
-          final item = cartController.cartItems[index];
-          return Column(
-            children: [
-              CartItemWidget(cartItem: item), // Truyền CartItemModel
-              if (showAddRemoveButton) const SizedBox(height: AppSizes.spaceBtwItems),
-              
-              if (showAddRemoveButton)
-                Padding( // Thêm Padding để căn chỉnh
-                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween, // Căn chỉnh các phần tử
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: AppSizes.spaceBtwItems),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return Dismissible(
+            key: Key(item['productId']),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: AppSizes.defaultSpace),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(AppSizes.cardRadiusLg),
+              ),
+              child: const Icon(Icons.delete, color: Colors.white),
+            ),
+            onDismissed: (direction) {
+              controller.removeCartItem(item['productId']);
+            },
+            child: Container(
+              padding: const EdgeInsets.all(AppSizes.sm),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(AppSizes.cardRadiusLg),
+                border: Border.all(color: Colors.grey.withOpacity(0.1)),
+              ),
+              child: Column(
+                children: [
+                  CartItemWidget(
+                    cartItem: CartItemModel(
+                      id: item['productId'],
+                      name: item['name'],
+                      price: item['price'].toDouble(),
+                      quantity: item['quantity'],
+                      imageUrl: item['image'],
+                      unit: item['unit'],
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.spaceBtwItems),
+                  
+                  // Quantity Controls
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Add remove button
+                      // Quantity Buttons
                       Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // SizedBox(width: 70), // Bỏ SizedBox cố định này
-                          ProductQuantityWithAddRemoveButton(
-                            quantity: item.quantity,
-                            isLoading: cartController.isLoading.value,
-                            add: () => cartController.incrementQuantity(item),
-                            remove: () => cartController.decrementQuantity(item),
+                          IconButton(
+                            onPressed: () {
+                              if (item['quantity'] > 1) {
+                                controller.updateCartItem(
+                                  item['productId'],
+                                  item['quantity'] - 1,
+                                );
+                              } else {
+                                Get.defaultDialog(
+                                  title: 'Xóa sản phẩm',
+                                  middleText: 'Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?',
+                                  confirm: ElevatedButton(
+                                    onPressed: () {
+                                      controller.removeCartItem(item['productId']);
+                                      Get.back();
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Xóa'),
+                                  ),
+                                  cancel: OutlinedButton(
+                                    onPressed: () => Get.back(),
+                                    child: const Text('Hủy'),
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.remove),
+                          ),
+                          Text(
+                            item['quantity'].toString(),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              controller.updateCartItem(
+                                item['productId'],
+                                item['quantity'] + 1,
+                              );
+                            },
+                            icon: const Icon(Icons.add),
                           ),
                         ],
                       ),
-                      
-                      // Product total price for this item
-                      ProductPriceText(price: (item.price * item.quantity).toStringAsFixed(0)), // Tính tổng tiền cho item này
+
+                      // Item Total
+                      Text(
+                        '${(item['price'] * item['quantity']).toStringAsFixed(0)}đ',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                     ],
                   ),
-                )
-            ],
+                ],
+              ),
+            ),
           );
         },
       );

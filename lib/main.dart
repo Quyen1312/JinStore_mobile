@@ -1,64 +1,110 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_jin/features/authentication/screens/login/login.dart';
+import 'package:flutter_application_jin/features/authentication/screens/onboarding/onboarding.dart';
 import 'package:flutter_application_jin/features/authentication/screens/signup/signup.dart';
-import 'package:flutter_application_jin/features/authentication/screens/splash/splash_screen.dart'; // Đảm bảo đường dẫn này chính xác
-import 'package:flutter_application_jin/features/shop/screens/cart/cart.dart';
-import 'package:flutter_application_jin/features/shop/screens/home/home.dart';
-import 'package:flutter_application_jin/utils/helpers/dependencies.dart' as dep; // Alias cho dependencies
-import 'package:flutter_application_jin/utils/theme/theme.dart'; // Import theme của bạn
+import 'package:flutter_application_jin/features/authentication/screens/splash/splash_screen.dart';
+import 'package:flutter_application_jin/features/shop/screens/all_products/all_products.dart'; // Lớp AllProducts
+import 'package:flutter_application_jin/features/shop/screens/cart/cart.dart';                 // Lớp CartScreen
+import 'package:flutter_application_jin/features/shop/screens/discount/discount.dart';
+import 'package:flutter_application_jin/features/shop/screens/home/home.dart';                   // Lớp HomeScreen
+import 'package:flutter_application_jin/features/shop/screens/product_details/product_detail.dart'; // Lớp ProductDetail
+import 'package:flutter_application_jin/features/shop/screens/product_details/widgets/product_review_section.dart';
+import 'package:flutter_application_jin/features/shop/screens/search/search_screen.dart';          // Lớp SearchScreen // Placeholder, bạn cần tạo màn hình này
+import 'package:flutter_application_jin/features/shop/screens/checkout/checkout.dart';           // Lớp CheckoutScreen            // Lớp Coupons
+import 'package:flutter_application_jin/features/shop/screens/order/order.dart';                   // Lớp OrderScreen
+import 'package:flutter_application_jin/features/personalization/screens/address/address.dart';    // Lớp UserAddressScreen
+import 'package:flutter_application_jin/features/personalization/screens/profile/profile.dart';    // Lớp ProfileScreen
+import 'package:flutter_application_jin/features/personalization/screens/settings/settings.dart';  // Lớp SettingsScreen
+import 'package:flutter_application_jin/features/shop/models/product_model.dart'; // Import Product model
+import 'package:flutter_application_jin/service/dependencies.dart';
+import 'package:flutter_application_jin/utils/theme/theme.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// SharedPreferences đã được xử lý trong DependencyInjection.init()
 
 // Hàm main, điểm khởi đầu của ứng dụng
 Future<void> main() async {
-  // --- Đảm bảo các Widget Binding đã được khởi tạo ---
-  // Cần thiết cho các hoạt động bất đồng bộ trước khi runApp()
   WidgetsFlutterBinding.ensureInitialized();
-
-  // --- Khởi tạo SharedPreferences ---
-  // Cần thiết nếu bạn lưu trữ dữ liệu cục bộ như token, trạng thái onboarding, v.v.
-  // Get.putAsync() có thể là một cách tốt hơn để xử lý SharedPreferences nếu bạn muốn nó là một service có thể truy cập qua GetX
-  await SharedPreferences.getInstance();
-
-  // --- Khởi tạo Dependencies ---
-  // Gọi hàm init từ file dependencies.dart để đăng ký các services, repositories, controllers
-  await dep.init();
-
-  // --- Chạy ứng dụng ---
+  // SharedPreferences.getInstance() được gọi trong DependencyInjection.init() rồi.
+  await DependencyInjection.init();
   runApp(const App());
 }
 
-// Widget App gốc của ứng dụng
 class App extends StatelessWidget {
   const App({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'JinStore', // Lấy tên ứng dụng từ hằng số (nếu có)
-      themeMode: ThemeMode.system, // Sử dụng theme hệ thống (sáng/tối)
-      theme: AppTheme.lightTheme, // Theme sáng
-      darkTheme: AppTheme.darkTheme, // Theme tối
-      debugShowCheckedModeBanner: false, // Tắt banner debug
-      // initialBinding: GeneralBindings(), // Nếu bạn có GeneralBindings cho các controller không lazy load
-      
-      // --- Màn hình bắt đầu ---
-      // Đặt SplashScreen làm màn hình home ban đầu.
-      // SplashController sẽ xử lý logic điều hướng dựa trên trạng thái đăng nhập.
+      title: 'JinStore',
+      themeMode: ThemeMode.system,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      debugShowCheckedModeBanner: false,
+      initialRoute: AppRoutes.home, // Sử dụng initialRoute với hằng số
       getPages: AppRoutes.routes,
-      home:   SplashScreen(), 
     );
   }
 }
 
 class AppRoutes {
+  // Định nghĩa các hằng số cho tên route
+  static const String splash = '/';
+  static const String onboarding = '/onboarding';
+  static const String login = '/login';
+  static const String signup = '/signup';
+  static const String home = '/home';
+  static const String cart = '/cart';
+  static const String search = '/search';
+  static const String allProducts = '/all-products'; // Đổi tên route cho rõ ràng
+  static const String productDetail = '/product-detail';
+  static const String allCategories = '/all-categories';
+  static const String productReviews = '/product-reviews';
+  static const String settings = '/settings';
+  static const String profile = '/profile';
+  static const String userAddress = '/user-address';
+  static const String myOrders = '/my-orders';
+  static const String coupons = '/coupons';
+  static const String checkout = '/checkout';
+  // Thêm các hằng số route khác nếu cần
+
   static final routes = [
-    GetPage(name: '/', page: () =>  SplashScreen()), // Hoặc màn hình Login nếu không có Splash
-    GetPage(name: '/login', page: () =>  LoginScreen()),
-    GetPage(name: '/signup', page: () => const SignupScreen()),
-    GetPage(name: '/home', page: () => const HomeScreen()),
-    GetPage(name: '/cart', page: () => const CartScreen()),
-    // Đảm bảo tên và widget đúng
-    // ... các routes khác
+    GetPage(name: splash, page: () => SplashScreen()),
+    GetPage(name: onboarding, page: () => const OnBoardingScreen()),
+    GetPage(name: login, page: () => LoginScreen()),
+    GetPage(name: signup, page: () => const SignupScreen()),
+    GetPage(name: home, page: () => const HomeScreen()),
+    GetPage(name: cart, page: () => const CartScreen()),
+    GetPage(name: search, page: () => const SearchScreen()),
+    GetPage(
+      name: productDetail,
+      page: () {
+        final product = Get.arguments as ProductModel; // Đảm bảo truyền Product object
+        return ProductDetailScreen(product: product); // Sử dụng tên lớp ProductDetail của bạn
+      },
+    ),
+    GetPage(
+      name: allProducts,
+      page: () {
+        // Nhận tham số từ Get.parameters nếu dùng Get.toNamed với parameters
+        // Hoặc nhận từ Get.arguments nếu truyền một Map các arguments
+        final String title = Get.parameters['title'] ?? 'Sản phẩm';
+        return AllProductScreen( // Sử dụng tên lớp AllProducts của bạn
+          title: title,
+        );
+      },
+    ),
+    GetPage(
+      name: productReviews,
+      page: () {
+        final String productId = Get.arguments as String; // Đảm bảo truyền productId
+        return ProductReviewsScreen(productId: productId);
+      },
+    ),
+    GetPage(name: settings, page: () => const SettingsScreen()),
+    GetPage(name: profile, page: () => const ProfileScreen()),
+    GetPage(name: userAddress, page: () => const UserAddressScreen()),
+    GetPage(name: myOrders, page: () => const OrderScreen()),
+    GetPage(name: coupons, page: () =>  DiscountScreen()), // Sử dụng tên lớp Coupons của bạn
+    GetPage(name: checkout, page: () => const CheckoutScreen()),
   ];
 }

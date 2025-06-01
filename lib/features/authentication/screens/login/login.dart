@@ -14,7 +14,7 @@ class LoginScreen extends StatefulWidget {
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
-  final AuthController authController = Get.find();
+  final AuthController authController = Get.put(AuthController());
 }
 
 class _LoginScreenState extends State<LoginScreen> {
@@ -29,20 +29,20 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 // Logo, Title & Sub title
-                LoginHeader(),
+                const LoginHeader(),
 
                 // Form
                 LoginForm(),
 
                 // Divider
-                FormDivider(
+                const FormDivider(
                   dividerText: 'Or Sign in with',
                 ),
 
                 const SizedBox(height: AppSizes.spaceBtwSections),
 
                 // Footer
-                SocialButtons()
+                const SocialButtons()
               ],
             )),
       ),

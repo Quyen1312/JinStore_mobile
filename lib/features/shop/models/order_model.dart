@@ -1,97 +1,152 @@
-import 'dart:convert';
-import 'order_item_model.dart'; // From previous questions
+class OrderItem {
+  final String productId;
+  final String name;
+  final double price;
+  final int quantity;
+  final double? discount;
 
-class OrderModel {
-  final String id; // Maps to _id
-  final String userId; // Maps to _idUser
-  final List<OrderItemModel> orderItems;
-  final String shippingAddress; // Maps to AddressModel ID or object
-  final String paymentMethod; // Maps to PaymentMethod ID
-  final String? payment; // Maps to Payment ID, optional
-  final double totalPrice;
-  final bool isPaid;
-  final DateTime? paidAt;
-  final String status; // 'Chờ xác nhận', 'Đang xử lý', 'Đã giao hàng', 'Đã hủy'
-  final String? note;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
-
-  OrderModel({
-    required this.id,
-    required this.userId,
-    required this.orderItems,
-    required this.shippingAddress,
-    required this.paymentMethod,
-    this.payment,
-    required this.totalPrice,
-    this.isPaid = false,
-    this.paidAt,
-    this.status = 'Chờ xác nhận',
-    this.note,
-    this.createdAt,
-    this.updatedAt,
+  OrderItem({
+    required this.productId,
+    required this.name,
+    required this.price,
+    required this.quantity,
+    this.discount,
   });
 
-  // Convert OrderModel to JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'userId': userId,
-      'orderItems': orderItems.map((item) => item.toJson()).toList(),
-      'shippingAddress': shippingAddress,
-      'paymentMethod': paymentMethod,
-      if (payment != null) 'payment': payment,
-      'totalPrice': totalPrice,
-      'isPaid': isPaid,
-      if (paidAt != null) 'paidAt': paidAt!.toIso8601String(),
-      'status': status,
-      if (note != null) 'note': note,
-      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
-      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
-    };
-  }
-
-  // Create OrderModel from JSON
-  factory OrderModel.fromJson(Map<String, dynamic> json) {
-    return OrderModel(
-      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
-      userId: json['_idUser']?.toString() ?? json['userId']?.toString() ?? '',
-      orderItems: (json['orderItems'] as List<dynamic>?)
-              ?.map((item) => OrderItemModel.fromJson(item))
-              .toList() ??
-          [],
-      shippingAddress: json['shippingAddress']?.toString() ?? '',
-      paymentMethod: json['paymentMethod']?.toString() ?? '',
-      payment: json['payment']?.toString(),
-      totalPrice: (json['totalPrice'] ?? 0).toDouble(),
-      isPaid: json['isPaid'] ?? false,
-      paidAt: json['paidAt'] != null ? DateTime.parse(json['paidAt']) : null,
-      status: json['status'] ?? 'Chờ xác nhận',
-      note: json['note'],
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+  factory OrderItem.fromJson(Map<String, dynamic> json) {
+    return OrderItem(
+      productId: json['productId'],
+      name: json['name'],
+      price: json['price'].toDouble(),
+      quantity: json['quantity'],
+      discount: json['discount']?.toDouble(),
     );
   }
 
-  // Static empty method
-  static OrderModel empty() => OrderModel(
-        id: '',
-        userId: '',
-        orderItems: [],
-        shippingAddress: '',
-        paymentMethod: '',
-        totalPrice: 0.0,
-      );
+  Map<String, dynamic> toJson() {
+    return {
+      'productId': productId,
+      'name': name,
+      'price': price,
+      'quantity': quantity,
+      'discount': discount,
+    };
+  }
 
-  // Convert to JSON string
-  String toJsonString() => jsonEncode(toJson());
-
-  // Create from JSON string
-  static OrderModel fromJsonString(String jsonString) {
-    try {
-      return OrderModel.fromJson(jsonDecode(jsonString));
-    } catch (e) {
-      throw FormatException('Invalid JSON string: $e');
+  double get total {
+    if (discount != null && discount! > 0) {
+      return (price - (price * discount! / 100)) * quantity;
     }
+    return price * quantity;
   }
 }
+
+class Order {
+  final String id;
+  final String userId;
+  final List<OrderItem> items;
+  final String shippingAddress;
+  final String paymentMethod;
+  final double totalAmount;
+  final String status;
+  final String? paymentId;
+  final bool isPaid;
+  final DateTime? paidAt;
+  final bool isDelivered;
+  final DateTime? deliveredAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  Order({
+    required this.id,
+    required this.userId,
+    required this.items,
+    required this.shippingAddress,
+    required this.paymentMethod,
+    required this.totalAmount,
+    required this.status,
+    this.paymentId,
+    required this.isPaid,
+    this.paidAt,
+    required this.isDelivered,
+    this.deliveredAt,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory Order.fromJson(Map<String, dynamic> json) {
+    return Order(
+      id: json['_id'],
+      userId: json['userId'],
+      items: (json['items'] as List)
+          .map((item) => OrderItem.fromJson(item))
+          .toList(),
+      shippingAddress: json['shippingAddress'],
+      paymentMethod: json['paymentMethod'],
+      totalAmount: json['totalAmount'].toDouble(),
+      status: json['status'],
+      paymentId: json['paymentId'],
+      isPaid: json['isPaid'],
+      paidAt: json['paidAt'] != null ? DateTime.parse(json['paidAt']) : null,
+      isDelivered: json['isDelivered'],
+      deliveredAt: json['deliveredAt'] != null
+          ? DateTime.parse(json['deliveredAt'])
+          : null,
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: DateTime.parse(json['updatedAt']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'userId': userId,
+      'items': items.map((item) => item.toJson()).toList(),
+      'shippingAddress': shippingAddress,
+      'paymentMethod': paymentMethod,
+      'totalAmount': totalAmount,
+      'status': status,
+      'paymentId': paymentId,
+      'isPaid': isPaid,
+      'paidAt': paidAt?.toIso8601String(),
+      'isDelivered': isDelivered,
+      'deliveredAt': deliveredAt?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  Order copyWith({
+    String? id,
+    String? userId,
+    List<OrderItem>? items,
+    String? shippingAddress,
+    String? paymentMethod,
+    double? totalAmount,
+    String? status,
+    String? paymentId,
+    bool? isPaid,
+    DateTime? paidAt,
+    bool? isDelivered,
+    DateTime? deliveredAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Order(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      items: items ?? this.items,
+      shippingAddress: shippingAddress ?? this.shippingAddress,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      totalAmount: totalAmount ?? this.totalAmount,
+      status: status ?? this.status,
+      paymentId: paymentId ?? this.paymentId,
+      isPaid: isPaid ?? this.isPaid,
+      paidAt: paidAt ?? this.paidAt,
+      isDelivered: isDelivered ?? this.isDelivered,
+      deliveredAt: deliveredAt ?? this.deliveredAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+} 

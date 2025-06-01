@@ -24,7 +24,7 @@ class CategoryImage {
   }
 }
 
-class CategoryModel {
+class Category {
   final String id; // Maps to _id
   final String code;
   final String name;
@@ -36,7 +36,7 @@ class CategoryModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  CategoryModel({
+  Category({
     required this.id,
     required this.code,
     required this.name,
@@ -66,8 +66,8 @@ class CategoryModel {
   }
 
   // Create CategoryModel from JSON
-  factory CategoryModel.fromJson(Map<String, dynamic> json) {
-    return CategoryModel(
+  factory Category.fromJson(Map<String, dynamic> json) {
+    return Category(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       code: json['code'] ?? '',
       name: json['name'] ?? '',
@@ -82,7 +82,7 @@ class CategoryModel {
   }
 
   // Static empty method
-  static CategoryModel empty() => CategoryModel(
+  static Category empty() => Category(
         id: '',
         code: '',
         name: '',
@@ -94,9 +94,9 @@ class CategoryModel {
   String toJsonString() => jsonEncode(toJson());
 
   // Create from JSON string
-  static CategoryModel fromJsonString(String jsonString) {
+  static Category fromJsonString(String jsonString) {
     try {
-      return CategoryModel.fromJson(jsonDecode(jsonString));
+      return Category.fromJson(jsonDecode(jsonString));
     } catch (e) {
       throw FormatException('Invalid JSON string: $e');
     }

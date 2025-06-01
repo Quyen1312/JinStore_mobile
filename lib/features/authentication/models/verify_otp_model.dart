@@ -1,42 +1,62 @@
-class VerifyOTPModel {
-  final String id; // Maps to _id
-  final String user; // Maps to user ID
-  final bool isEmailVerified;
-  final bool isPhoneVerified;
-  final String? otp; // Temporary OTP code
-  final DateTime? otpExpires; // OTP expiration time
+class VerifyOTP {
+  final String email;
+  final String otp;
+  final DateTime? expiresAt;
+  final bool isVerified;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  VerifyOTPModel({
-    required this.id,
-    required this.user,
-    this.isEmailVerified = false,
-    this.isPhoneVerified = false,
-    this.otp,
-    this.otpExpires,
+  VerifyOTP({
+    required this.email,
+    required this.otp,
+    this.expiresAt,
+    required this.isVerified,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
- 
-  // Create VerifyOTPModel from JSON
-  factory VerifyOTPModel.fromJson(Map<String, dynamic> json) {
-    return VerifyOTPModel(
-      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
-      user: json['user']?.toString() ?? '',
-      isEmailVerified: json['isEmailVerified'] ?? false,
-      isPhoneVerified: json['isPhoneVerified'] ?? false,
+  factory VerifyOTP.fromJson(Map<String, dynamic> json) {
+    return VerifyOTP(
+      email: json['email'],
       otp: json['otp'],
-      otpExpires: json['otpExpires'] != null ? DateTime.parse(json['otpExpires']) : null,
+      expiresAt: json['expiresAt'] != null ? DateTime.parse(json['expiresAt']) : null,
+      isVerified: json['isVerified'],
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: DateTime.parse(json['updatedAt']),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
-      'user': user,
-      'isEmailVerified': isEmailVerified,
-      'isPhoneVerified': isPhoneVerified,
-      if (otp != null) 'otp': otp,
-      if (otpExpires != null) 'otpExpires': otpExpires!.toIso8601String(),
+      'email': email,
+      'otp': otp,
+      'expiresAt': expiresAt?.toIso8601String(),
+      'isVerified': isVerified,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
-}
+  VerifyOTP copyWith({
+    String? email,
+    String? otp,
+    DateTime? expiresAt,
+    bool? isVerified,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return VerifyOTP(
+      email: email ?? this.email,
+      otp: otp ?? this.otp,
+      expiresAt: expiresAt ?? this.expiresAt,
+      isVerified: isVerified ?? this.isVerified,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  bool get isExpired {
+    if (expiresAt == null) return false;
+    return DateTime.now().isAfter(expiresAt!);
+  }
+} 

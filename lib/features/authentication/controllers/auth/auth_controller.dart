@@ -1,254 +1,299 @@
-import 'package:flutter_application_jin/data/repositories/authentication/auth_repository.dart';
-import 'package:flutter_application_jin/features/authentication/models/user_model.dart';
-import 'package:flutter_application_jin/features/authentication/models/verify_otp_model.dart';
-import 'package:flutter_application_jin/features/personalization/controllers/user/user_controller.dart';
-import 'package:flutter_application_jin/bottom_navigation_bar.dart'; 
-import 'package:flutter_application_jin/features/authentication/screens/login/login.dart';
-// import 'package:flutter_application_jin/features/authentication/screens/verifyOTP/otp_screen.dart'; // Import nếu OTP còn dùng cho đăng ký
-import 'package:flutter_application_jin/utils/constants/api_constants.dart'; 
-import 'package:flutter_application_jin/utils/http/api_client.dart';
-import 'package:flutter_application_jin/utils/popups/full_screen_loader.dart'; 
-import 'package:flutter_application_jin/utils/popups/loaders.dart'; 
+import 'package:flutter/material.dart' show VoidCallback;
+import 'package:flutter_application_jin/utils/popups/loaders.dart';
 import 'package:get/get.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_application_jin/service/user/user_service.dart';
+import 'package:flutter_application_jin/service/auth/auth_service.dart';
+import 'package:flutter_application_jin/features/authentication/screens/login/login.dart';
+import 'package:flutter_application_jin/features/shop/screens/home/home.dart';
+import 'package:flutter_application_jin/features/authentication/models/verify_otp_model.dart';
 
 class AuthController extends GetxController {
   static AuthController get instance => Get.find();
 
-  final AuthRepository authRepository;
-  final ApiClient apiClient; 
+  final AuthService _authService = Get.find<AuthService>();
+  final UserService _userService = Get.find<UserService>();
 
-  var isLoading = false.obs;
-  var isLoggedIn = false.obs;
-
-  AuthController({required this.authRepository, required this.apiClient});
-
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    // Optional: Nếu bạn cần lấy idToken cho backend từ Flutter Web,
-    // bạn cần cung cấp Web Client ID (từ Google Cloud Console, loại Web Application) ở đây.
-    // clientId: 'YOUR_WEB_OAUTH_CLIENT_ID.apps.googleusercontent.com',
-    scopes: ['email', 'profile'], 
-  );
-  var isGoogleLoading = false.obs;
-
-  Future<void> checkLoginStatusAndNavigate() async {
-    final token = await authRepository.getUserToken();
-    if (token != null && token.isNotEmpty) {
-      apiClient.updateHeader(token); // QUAN TRỌNG: Cập nhật token cho ApiClient
-
-      final userInfoResponse = await authRepository.fetchCurrentUserInfo();
-
-      if (userInfoResponse.statusCode == ApiConstants.SUCCESS) {
-        Map<String, dynamic>? userData;
-        if (userInfoResponse.body != null) {
-          // Điều chỉnh dựa trên cấu trúc API response thực tế cho /users/info-user
-          if (userInfoResponse.body['user'] != null && userInfoResponse.body['user'] is Map<String,dynamic>) {
-            userData = userInfoResponse.body['user'];
-          } else if (userInfoResponse.body['data'] != null && userInfoResponse.body['data'] is Map<String,dynamic>) {
-            userData = userInfoResponse.body['data'];
-          } else if (userInfoResponse.body is Map<String,dynamic> && (userInfoResponse.body.containsKey('email') || userInfoResponse.body.containsKey('_id'))) { // Kiểm tra trường phổ biến
-            userData = userInfoResponse.body;
-          }
-        }
-
-        if (userData != null) {
-           UserController.instance.setUser(User.fromJson(userData));
-           isLoggedIn.value = true;
-           Get.offAll(() => const BottomNavMenu()); // Đảm bảo BottomNavMenu là tên class đúng
-           return;
-        } else {
-          Loaders.warningSnackBar(title: 'Lỗi dữ liệu', message: 'Không thể phân tích thông tin người dùng từ API.');
-        }
-      } else if (userInfoResponse.statusCode == ApiConstants.UNAUTHORIZED) {
-        // Thử làm mới token
-        final refreshResponse = await authRepository.refreshToken();
-        if (refreshResponse.statusCode == ApiConstants.SUCCESS) {
-          // Token đã được làm mới, AuthRepository đã lưu token mới và cập nhật header cho apiClient
-          // Gọi lại checkLoginStatusAndNavigate để thử lại với token mới
-          // Để tránh vòng lặp vô hạn nếu refresh cũng lỗi, cần cơ chế kiểm soát kỹ hơn ở đây
-          // For now, simple retry:
-          await checkLoginStatusAndNavigate(); 
-          return;
-        }
-      }
-      // Nếu token không hợp lệ, refresh thất bại, hoặc lỗi khác, xóa token
-      await authRepository.clearToken();
-    }
-    isLoggedIn.value = false;
-    UserController.instance.setUser(null); // Đảm bảo user state được clear
-    Get.offAll(() => LoginScreen());
-  }
-
-  Future<void> login(String identifier, String password) async {
-    try {
-      isLoading.value = true;
-      final response = await authRepository.login(
-        identifier: identifier,
-        password: password,
-      );
-
-      if (response.statusCode == ApiConstants.SUCCESS || response.statusCode == ApiConstants.CREATED) {
-        // Token đã được lưu bởi AuthRepository, giờ lấy thông tin người dùng
-        final userInfoResponse = await authRepository.fetchCurrentUserInfo();
-
-        if (userInfoResponse.statusCode == ApiConstants.SUCCESS) {
-            Map<String, dynamic>? userData;
-             if (userInfoResponse.body != null) {
-                if (userInfoResponse.body['user'] != null && userInfoResponse.body['user'] is Map<String,dynamic>) {
-                    userData = userInfoResponse.body['user'];
-                } else if (userInfoResponse.body['data'] != null && userInfoResponse.body['data'] is Map<String,dynamic>) {
-                    userData = userInfoResponse.body['data'];
-                } else if (userInfoResponse.body is Map<String,dynamic> && (userInfoResponse.body.containsKey('email') || userInfoResponse.body.containsKey('_id'))) {
-                    userData = userInfoResponse.body;
-                }
-            }
-
-            if (userData != null) {
-              UserController.instance.setUser(User.fromJson(userData));
-              isLoggedIn.value = true;
-              Loaders.successSnackBar(title: 'Thành công', message: response.body?['message'] ?? 'Đăng nhập thành công!');
-              Get.offAll(() => const BottomNavMenu());
-            } else {
-              isLoggedIn.value = false;
-              await authRepository.clearToken(); 
-              Loaders.errorSnackBar(title: 'Lỗi', message: 'Không thể lấy thông tin người dùng sau khi đăng nhập.');
-            }
-        } else {
-          isLoggedIn.value = false;
-          await authRepository.clearToken(); 
-          Loaders.errorSnackBar(title: 'Lỗi', message: userInfoResponse.body?['message'] ?? userInfoResponse.statusText ?? 'Lỗi lấy thông tin người dùng.');
-        }
-      } else {
-        isLoggedIn.value = false;
-        String errorMessage = response.body?['message'] ?? response.statusText ?? 'Đăng nhập thất bại.';
-        Loaders.errorSnackBar(title: 'Lỗi', message: errorMessage);
-      }
-    } catch (e) {
-      isLoggedIn.value = false;
-      Loaders.errorSnackBar(title: 'Ôi không!', message: 'Đã xảy ra lỗi khi đăng nhập: ${e.toString()}');
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> register(User userModel) async {
-    try {
-      isLoading.value = true;
-      // Giả sử userModel.toRegisterJson() đã được tạo trong UserModel cho các trường đăng ký cụ thể
-      final response = await authRepository.register(userModel); 
-
-      if (response.statusCode == ApiConstants.SUCCESS || response.statusCode == ApiConstants.CREATED) {
-        String successMessage = response.body?['message'] ?? 'Đăng ký thành công. Vui lòng đăng nhập hoặc xác thực email nếu được yêu cầu.';
-        Loaders.successSnackBar(title: 'Thành công', message: successMessage);
-        // Xem xét điều hướng đến màn hình OTP nếu cần xác thực email, hoặc màn hình Login
-        Get.to(() =>  LoginScreen());
-      } else {
-        String errorMessage = response.body?['message'] ?? response.statusText ?? 'Đăng ký thất bại.';
-        Loaders.errorSnackBar(title: 'Lỗi', message: errorMessage);
-      }
-    } catch (e) {
-      Loaders.errorSnackBar(title: 'Ôi không!', message: 'Lỗi đăng ký: ${e.toString()}');
-    } finally {
-      isLoading.value = false;
-    }
-  }
+  final RxBool isLoading = false.obs;
+  final RxString error = ''.obs;
+  final RxBool isLoggedIn = false.obs;
+  final RxString token = ''.obs;
+  final RxMap<String, dynamic> currentUser = <String, dynamic>{}.obs;
 
   @override
-  Future<void> logout() async { // Sửa lại để là @override nếu GetxController có phương thức này, nếu không thì bỏ @override
+  void onInit() {
+    super.onInit();
+    checkLoginStatus();
+  }
+
+  Future<void> checkLoginStatus() async {
     try {
       isLoading.value = true;
-      if (await _googleSignIn.isSignedIn()) {
-        await _googleSignIn.signOut();
-        print("Đã đăng xuất khỏi Google");
-      }
-      // ... (phần còn lại của logout)
-      final response = await authRepository.logout();
-      if (response.statusCode == ApiConstants.SUCCESS || response.statusCode == ApiConstants.NO_CONTENT) {
-        Loaders.successSnackBar(title: 'Thành công', message: response.body?['message'] ?? 'Đăng xuất thành công!');
+      error.value = '';
+      
+      final storedToken = await _authService.getToken();
+      if (storedToken != null && storedToken.isNotEmpty) {
+        token.value = storedToken;
+        isLoggedIn.value = true;
+        await fetchCurrentUser();
       } else {
-        await authRepository.clearToken(); 
-        Loaders.warningSnackBar(title: 'Thông báo', message: response.statusText ?? 'Đăng xuất thất bại từ server, đã đăng xuất cục bộ.');
+        isLoggedIn.value = false;
+        currentUser.value = {};
       }
     } catch (e) {
-      await authRepository.clearToken(); 
-      Loaders.errorSnackBar(title: 'Ôi không!', message: 'Lỗi đăng xuất: ${e.toString()}. Đã đăng xuất cục bộ.');
-    } finally {
+      error.value = e.toString();
       isLoggedIn.value = false;
-      UserController.instance.setUser(null);
-      //CartController.instance.clearCart();
-      isLoading.value = false;
-      Get.offAll(() =>  LoginScreen());
-    }
-  }
-
-  // --- Chức năng Quên Mật Khẩu đã được BỎ ---
-  // Future<void> forgotPasswordRequest(String email) async { ... }
-  // Future<void> completePasswordReset(Map<String, dynamic> resetData) async { ... }
-
-  Future<void> changePassword(Map<String, dynamic> passwordData) async {
-    // Dành cho người dùng đã đăng nhập muốn đổi mật khẩu hiện tại của họ
-    try {
-      isLoading.value = true;
-      final response = await authRepository.changePassword(passwordData);
-
-      if (response.statusCode == ApiConstants.SUCCESS) {
-        Loaders.successSnackBar(title: 'Thành công', message: response.body?['message'] ?? 'Đổi mật khẩu thành công.');
-        // Có thể Get.back(); hoặc yêu cầu người dùng đăng nhập lại với mật khẩu mới
-      } else {
-        String errorMessage = response.body?['message'] ?? response.statusText ?? 'Đổi mật khẩu thất bại.';
-        Loaders.errorSnackBar(title: 'Lỗi', message: errorMessage);
-      }
-    } catch (e) {
-      Loaders.errorSnackBar(title: 'Ôi không!', message: 'Lỗi đổi mật khẩu: ${e.toString()}');
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Phương thức này vẫn có thể hữu ích nếu bạn dùng OTP cho việc khác, ví dụ xác thực đăng ký
-  Future<void> verifyOTP(VerifyOTPModel verifyOTPModel, {required String flow}) async {
+  Future<void> checkLoginStatusAndNavigate() async {
+    await checkLoginStatus();
+    if (isLoggedIn.value) {
+      Get.offAll(() => const HomeScreen());
+    } else {
+      Get.offAll(() => LoginScreen());
+    }
+  }
+
+  Future<void> login({
+    required String usernameOrEmail,
+    required String password,
+  }) async {
     try {
       isLoading.value = true;
-      final response = await authRepository.verifyOTP(verifyOTPModel);
+      error.value = '';
+      print('[AuthController] Bước 1: Bắt đầu quá trình đăng nhập cho: $usernameOrEmail');
 
-      if (response.statusCode == ApiConstants.SUCCESS) {
-        Loaders.successSnackBar(title: 'Thành công', message: response.body?['message'] ?? 'Xác thực OTP thành công.');
-        
-        if (flow == 'emailVerificationAfterRegister') {
-          Loaders.successSnackBar(title: 'Thành công', message: 'Email đã được xác thực. Vui lòng đăng nhập.');
-          Get.offAll(() =>  LoginScreen());
-        }
-        // Xử lý các 'flow' khác nếu có
-      } else {
-        String errorMessage = response.body?['message'] ?? response.statusText ?? 'Xác thực OTP thất bại.';
-        Loaders.errorSnackBar(title: 'Lỗi', message: errorMessage);
+      final loginResult = await _authService.login( // Đảm bảo gọi đúng (positional hoặc named)
+        usernameOrEmail, // Nếu AuthService.login là positional
+        password,
+      );
+      print('[AuthController] Bước 2: Gọi AuthService.login thành công. Kết quả: $loginResult');
+
+      if (loginResult == null) {
+        throw Exception('Kết quả đăng nhập từ service là null.');
       }
+
+      // SỬA Ở ĐÂY: Dùng đúng key "accessToken"
+      final tokenFromLoginResult = loginResult['accessToken']; // <--- THAY ĐỔI
+      if (tokenFromLoginResult == null || !(tokenFromLoginResult is String) || tokenFromLoginResult.isEmpty) {
+        throw Exception('AccessToken không hợp lệ hoặc bị thiếu trong kết quả đăng nhập.');
+      }
+      
+      // Dữ liệu user trong trường hợp này là chính loginResult (trừ accessToken và các key không phải user)
+      // Hoặc nếu API trả về một key 'user' riêng biệt chứa user object thì dùng loginResult['user']
+      // Dựa trên response body bạn cung cấp, loginResult chính là user object, có thêm accessToken.
+      final Map<String, dynamic> userData;
+      if (loginResult['user'] != null && loginResult['user'] is Map<String, dynamic>) {
+          userData = loginResult['user'] as Map<String, dynamic>;
+      } else {
+          // Nếu không có key 'user' riêng, thì toàn bộ loginResult (sau khi lấy token) có thể là user data
+          // Cần làm rõ cấu trúc trả về chính xác từ API của bạn để gán currentUser.value
+          // Tạm thời, nếu user data nằm cùng cấp với accessToken trong loginResult:
+          userData = Map<String, dynamic>.from(loginResult);
+          userData.remove('accessToken'); // Loại bỏ token khỏi user data nếu nó nằm cùng cấp
+          // Hoặc nếu API luôn trả về một object user lồng bên trong:
+          // printWarning(info: '[AuthController] User data không có key "user" riêng. Cần kiểm tra cấu trúc API.');
+          // userData = {}; // Hoặc xử lý khác
+      }
+
+
+      token.value = tokenFromLoginResult;
+      isLoggedIn.value = true;
+      currentUser.value = userData; // Gán user data đã được xử lý
+      
+      print('[AuthController] Bước 3: Cập nhật trạng thái thành công: isLoggedIn=${isLoggedIn.value}, token=${token.value.isNotEmpty ? "có token" : "không có token"}, user=${currentUser.value.isNotEmpty ? currentUser.value['fullname'] ?? usernameOrEmail : "dữ liệu user rỗng"}');
+
+      Loaders.successSnackBar(
+          title: 'Đăng nhập thành công!',
+          message: 'Chào mừng bạn trở lại, ${currentUser.value['fullname'] ?? usernameOrEmail}!'); // Sửa 'fullName' thành 'fullname' nếu key trong JSON là 'fullname'
+      
+      print('[AuthController] Bước 4: Chuẩn bị điều hướng đến HomeScreen...');
+      Get.offAll(() => const HomeScreen());
+      print('[AuthController] Bước 5: Lệnh điều hướng đến HomeScreen đã được gọi.');
+
+    } catch (e, stackTrace) {
+      // ... (khối catch giữ nguyên) ...
+      print('[AuthController] >>> LỖI TRONG QUÁ TRÌNH ĐĂNG NHẬP <<<');
+      print('[AuthController] Lỗi (Error): ${e.toString()}');
+      print('[AuthController] StackTrace:');
+      print(stackTrace.toString());
+      print('[AuthController] >>> KẾT THÚC LỖI <<<');
+      
+      printError(info: '[AuthController] LỖI (GetX): ${e.toString()}');
+      printError(info: '[AuthController] STACKTRACE (GetX): ${stackTrace.toString()}');
+
+      error.value = e.toString();
+      isLoggedIn.value = false;
+      currentUser.value = {}; 
+
+      Loaders.errorSnackBar(title: 'Đăng nhập thất bại', message: e.toString());
+    } finally {
+      isLoading.value = false;
+      print('[AuthController] Bước 6: Kết thúc quá trình đăng nhập. isLoading: ${isLoading.value}');
+    }
+  }
+
+  Future<void> register({
+    required String fullname,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      isLoading.value = true;
+      error.value = '';
+      
+      final registerResult = await _authService.register(
+        fullname: fullname,
+        email: email,
+        password: password,
+      );
+      
+      token.value = registerResult['token'];
+      isLoggedIn.value = true;
+      currentUser.value = registerResult['user'];
+      
+      Get.offAll(() => const HomeScreen());
     } catch (e) {
-      Loaders.errorSnackBar(title: 'Ôi không!', message: 'Lỗi xác thực OTP: ${e.toString()}');
+      error.value = e.toString();
+      isLoggedIn.value = false;
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Phương thức này vẫn có thể hữu ích nếu bạn dùng OTP cho việc khác
-  Future<void> sendOTP(VerifyOTPModel verifyOTPModel, {String? flowContext}) async {
+  Future<void> logout() async {
     try {
       isLoading.value = true;
-      final response = await authRepository.sendOTP(verifyOTPModel);
-
-      if (response.statusCode == ApiConstants.SUCCESS || response.statusCode == ApiConstants.CREATED) {
-        Loaders.successSnackBar(title: 'Thành công', message: response.body?['message'] ?? 'OTP đã được gửi.');
-        // if (flowContext == 'emailVerificationAfterRegister' && verifyOTPModel.email != null) {
-        //    Get.to(() => OTPScreen(emailOrPhone: verifyOTPModel.email!, flow: 'emailVerificationAfterRegister'));
-        // }
-      } else {
-        String errorMessage = response.body?['message'] ?? response.statusText ?? 'Gửi OTP thất bại.';
-        Loaders.errorSnackBar(title: 'Lỗi', message: errorMessage);
-      }
+      error.value = '';
+      
+      await _authService.logout();
+      
+      token.value = '';
+      isLoggedIn.value = false;
+      currentUser.value = {};
+      
+      Get.offAll(() => LoginScreen());
     } catch (e) {
-      Loaders.errorSnackBar(title: 'Ôi không!', message: 'Lỗi gửi OTP: ${e.toString()}');
+      error.value = e.toString();
     } finally {
       isLoading.value = false;
     }
   }
+
+  Future<void> refreshToken() async {
+    try {
+      final newToken = await _authService.refreshToken();
+      token.value = newToken['token'];
+    } catch (e) {
+      error.value = e.toString();
+      await logout(); // Force logout if token refresh fails
+    }
+  }
+
+  Future<void> fetchCurrentUser() async {
+    try {
+      final userData = await _authService.getCurrentUser();
+      currentUser.value = userData;
+    } catch (e) {
+      error.value = e.toString();
+    }
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      isLoading.value = true;
+      error.value = '';
+      
+      await _userService.resetPassword(email: email, otp: otp, newPassword: newPassword, confirmPassword: confirmPassword);
+      
+      Get.snackbar('Success', 'Password has been reset successfully');
+      Get.offAll(() => LoginScreen());
+    } catch (e) {
+      error.value = e.toString();
+      Get.snackbar('Error', error.value);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Helper method to check if user has admin role
+  bool isAdmin() {
+    return currentUser.value['role'] == 'admin';
+  }
+
+  // Helper method to get user's full name
+  String getFullName() {
+    return currentUser.value['fullName'] as String? ?? 'Guest';
+  }
+
+  // Helper method to get user's email
+  String getEmail() {
+    return currentUser.value['email'] as String? ?? '';
+  }
+
+  // Helper method to get user's phone
+  String getPhone() {
+    return currentUser.value['phone'] as String? ?? '';
+  }
+
+  // Email verification methods
+  Future<void> sendOTP(String email) async {
+    try {
+      isLoading.value = true;
+      error.value = '';
+      
+      await _authService.sendOTP(email);
+      Get.snackbar(
+        'Thành công',
+        'Mã OTP đã được gửi đến $email',
+        snackPosition: SnackPosition.TOP,
+      );
+    } catch (e) {
+      error.value = e.toString();
+      Get.snackbar(
+        'Lỗi',
+        error.value,
+        snackPosition: SnackPosition.TOP,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> verifyOTP(VerifyOTP verifyOTP, {String flow = 'emailVerification'}) async {
+    try {
+      isLoading.value = true;
+      error.value = '';
+      
+      await _authService.verifyOTP(verifyOTP);
+      
+      Get.snackbar(
+        'Thành công',
+        'Email đã được xác thực thành công',
+        snackPosition: SnackPosition.TOP,
+      );
+
+      // Handle different flows
+      if (flow == 'emailVerificationAfterRegister') {
+        Get.offAll(() => HomeScreen());
+      }
+    } catch (e) {
+      error.value = e.toString();
+      Get.snackbar(
+        'Lỗi',
+        error.value,
+        snackPosition: SnackPosition.TOP,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
 }

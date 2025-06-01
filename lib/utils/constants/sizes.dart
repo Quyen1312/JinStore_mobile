@@ -23,6 +23,7 @@ class AppSizes {
   static const double buttonHeight = 18.0;
   static const double buttonWidth = 120.0;
   static const double buttonRadius = 12.0;
+  static const double buttonElevation = 4.0;
 
   // AppBar height
   static const double appBarHeight = 56.0;
@@ -66,5 +67,5 @@ class AppSizes {
   static const double loadingIndicatorSize = 36.0;
 
   // Grid view spacing
-  static const double gridViewSpacing = 16.0;
+  static const double gridSpacing = 16.0;
 }

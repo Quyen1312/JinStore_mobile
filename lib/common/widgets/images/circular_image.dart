@@ -42,7 +42,7 @@ class CircularImage extends StatelessWidget {
           fit: fit,
           image: isNetworkImage
               ? CachedNetworkImageProvider(image)
-              : AssetImage(image),
+              : AssetImage(image) as ImageProvider,
           color: overlayColor,
         ),
       ),

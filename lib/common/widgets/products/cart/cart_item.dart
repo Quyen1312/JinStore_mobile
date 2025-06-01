@@ -3,7 +3,6 @@ import 'package:flutter_application_jin/common/widgets/images/rounded_images.dar
 import 'package:flutter_application_jin/common/widgets/texts/product_title_text.dart';
 import 'package:flutter_application_jin/features/shop/models/cart_item_model.dart'; // Import CartItemModel
 import 'package:flutter_application_jin/utils/constants/colors.dart';
-// import 'package:flutter_application_jin/utils/constants/images.dart'; // Không cần nếu ảnh từ network
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
 import 'package:flutter_application_jin/utils/helpers/helper_functions.dart';
 

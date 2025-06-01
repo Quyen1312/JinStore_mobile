@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_jin/common/widgets/appbar/appbar.dart';
-import 'package:flutter_application_jin/features/authentication/controllers/auth/auth_controller.dart'; // Import AuthController
+import 'package:flutter_application_jin/features/personalization/controllers/user_controller.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
-import 'package:flutter_application_jin/utils/validators/validators.dart'; // Thêm import này
+import 'package:flutter_application_jin/utils/validators/validation.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
@@ -11,77 +10,110 @@ class ChangePassword extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AuthController authController = AuthController.instance; // Sử dụng AuthController
-    final TextEditingController oldPasswordController = TextEditingController();
-    final TextEditingController newPasswordController = TextEditingController();
-    final TextEditingController confirmNewPasswordController = TextEditingController();
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-    final RxBool oldPasswordVisible = false.obs;
-    final RxBool newPasswordVisible = false.obs;
-    final RxBool confirmNewPasswordVisible = false.obs;
-
+    final controller = Get.find<UserController>();
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final RxBool showCurrentPassword = false.obs;
+    final RxBool showNewPassword = false.obs;
+    final RxBool showConfirmPassword = false.obs;
 
     return Scaffold(
-      appBar: Appbar(
-        showBackArrow: true,
-        title: Text('Đổi mật khẩu', style: Theme.of(context).textTheme.headlineSmall),
+      appBar: AppBar(
+        title: const Text('Đổi mật khẩu'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSizes.defaultSpace),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Headings
-            Text(
-              'Mật khẩu của bạn phải có ít nhất 6 ký tự và bao gồm một ký tự đặc biệt.', // Ví dụ yêu cầu mật khẩu
-              style: Theme.of(context).textTheme.labelMedium,
-            ),
-            const SizedBox(height: AppSizes.spaceBtwSections),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSizes.defaultSpace),
+          child: Form(
+            key: formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Heading
+                Text(
+                  'Bảo mật tài khoản',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: AppSizes.sm),
+                Text(
+                  'Đảm bảo mật khẩu của bạn đủ mạnh và không chia sẻ cho người khác',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSizes.spaceBtwSections),
 
-            // Text field and button
-            Form(
-              key: formKey,
-              child: Column(
-                children: [
-                  Obx(() => TextFormField(
-                    controller: oldPasswordController,
-                    obscureText: !oldPasswordVisible.value,
-                    // Sử dụng AppValidator
-                    validator: (value) => Validator.validatePassword(value),
+                // Password Requirements
+                Container(
+                  padding: const EdgeInsets.all(AppSizes.md),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppSizes.cardRadiusLg),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Yêu cầu mật khẩu:',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSizes.sm),
+                      const Text('• Ít nhất 8 ký tự'),
+                      const Text('• Ít nhất 1 chữ in hoa'),
+                      const Text('• Ít nhất 1 chữ thường'),
+                      const Text('• Ít nhất 1 số'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSizes.spaceBtwSections),
+
+                // Current Password
+                Obx(
+                  () => TextFormField(
+                    controller: currentPasswordController,
+                    obscureText: !showCurrentPassword.value,
+                    validator: (value) => Validators.validatePassword(value),
                     decoration: InputDecoration(
-                      labelText: 'Mật khẩu cũ',
+                      labelText: 'Mật khẩu hiện tại',
                       prefixIcon: const Icon(Iconsax.password_check),
                       suffixIcon: IconButton(
-                        icon: Icon(oldPasswordVisible.value ? Iconsax.eye : Iconsax.eye_slash),
-                        onPressed: () => oldPasswordVisible.value = !oldPasswordVisible.value,
-                      )
+                        onPressed: () => showCurrentPassword.value = !showCurrentPassword.value,
+                        icon: Icon(showCurrentPassword.value ? Iconsax.eye : Iconsax.eye_slash),
+                      ),
                     ),
-                  )),
-                  const SizedBox(height: AppSizes.spaceBtwInputFields),
-                  Obx(() => TextFormField(
+                  ),
+                ),
+                const SizedBox(height: AppSizes.spaceBtwInputFields),
+
+                // New Password
+                Obx(
+                  () => TextFormField(
                     controller: newPasswordController,
-                    obscureText: !newPasswordVisible.value,
-                    // Sử dụng AppValidator
-                    validator: (value) => Validator.validatePassword(value),
+                    obscureText: !showNewPassword.value,
+                    validator: (value) => Validators.validatePassword(value),
                     decoration: InputDecoration(
                       labelText: 'Mật khẩu mới',
                       prefixIcon: const Icon(Iconsax.password_check),
                       suffixIcon: IconButton(
-                        icon: Icon(newPasswordVisible.value ? Iconsax.eye : Iconsax.eye_slash),
-                        onPressed: () => newPasswordVisible.value = !newPasswordVisible.value,
-                      )
+                        onPressed: () => showNewPassword.value = !showNewPassword.value,
+                        icon: Icon(showNewPassword.value ? Iconsax.eye : Iconsax.eye_slash),
+                      ),
                     ),
-                  )),
-                  const SizedBox(height: AppSizes.spaceBtwInputFields),
-                  Obx(() => TextFormField(
-                    controller: confirmNewPasswordController,
-                    obscureText: !confirmNewPasswordVisible.value,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.spaceBtwInputFields),
+
+                // Confirm New Password
+                Obx(
+                  () => TextFormField(
+                    controller: confirmPasswordController,
+                    obscureText: !showConfirmPassword.value,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Vui lòng xác nhận mật khẩu mới.';
+                        return 'Vui lòng xác nhận mật khẩu mới';
                       }
                       if (value != newPasswordController.text) {
-                        return 'Mật khẩu xác nhận không khớp.';
+                        return 'Mật khẩu xác nhận không khớp';
                       }
                       return null;
                     },
@@ -89,36 +121,42 @@ class ChangePassword extends StatelessWidget {
                       labelText: 'Xác nhận mật khẩu mới',
                       prefixIcon: const Icon(Iconsax.password_check),
                       suffixIcon: IconButton(
-                        icon: Icon(confirmNewPasswordVisible.value ? Iconsax.eye : Iconsax.eye_slash),
-                        onPressed: () => confirmNewPasswordVisible.value = !confirmNewPasswordVisible.value,
-                      )
+                        onPressed: () => showConfirmPassword.value = !showConfirmPassword.value,
+                        icon: Icon(showConfirmPassword.value ? Iconsax.eye : Iconsax.eye_slash),
+                      ),
                     ),
-                  )),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSizes.spaceBtwSections),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.spaceBtwSections),
 
-            // Save button
-            SizedBox(
-              width: double.infinity,
-              child: Obx(() => authController.isLoading.value
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    final passwordData = {
-                      "oldPassword": oldPasswordController.text.trim(),
-                      "newPassword": newPasswordController.text.trim(),
-                      // Backend API có thể cần thêm userId nếu không lấy từ token
-                    };
-                    authController.changePassword(passwordData);
-                  }
-                },
-                child: const Text('Lưu'),
-              )),
-            )
-          ],
+                // Update Button
+                SizedBox(
+                  width: double.infinity,
+                  child: Obx(
+                    () => ElevatedButton(
+                      onPressed: controller.isLoading.value
+                          ? null
+                          : () async {
+                              if (formKey.currentState!.validate()) {
+                                await controller.updatePassword(
+                                  currentPassword: currentPasswordController.text.trim(),
+                                  newPassword: newPasswordController.text.trim(),
+                                  confirmPassword: confirmPasswordController.text.trim(),
+                                );
+                                if (controller.error.value.isEmpty) {
+                                  Get.back();
+                                }
+                              }
+                            },
+                      child: controller.isLoading.value
+                          ? const CircularProgressIndicator()
+                          : const Text('Cập nhật mật khẩu'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

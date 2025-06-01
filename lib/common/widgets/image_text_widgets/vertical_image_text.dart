@@ -6,17 +6,19 @@ import 'package:flutter_application_jin/utils/constants/sizes.dart';
 import 'package:flutter_application_jin/utils/helpers/helper_functions.dart';
 
 class VerticalImageText extends StatelessWidget {
-  const VerticalImageText(
-      {super.key,
-      required this.image,
-      required this.title,
-      this.textColor = AppColors.white,
-      this.backgroundColor,
-      this.onTap,
-      this.isNetworkImage = false});
+  const VerticalImageText({
+    super.key,
+    required this.image,
+    required this.title,
+    this.textColor,
+    this.backgroundColor,
+    this.onTap,
+    this.isNetworkImage = false,
+  });
 
-  final String image, title;
-  final Color textColor;
+  final String image;
+  final String title;
+  final Color? textColor;
   final Color? backgroundColor;
   final void Function()? onTap;
   final bool isNetworkImage;
@@ -32,50 +34,41 @@ class VerticalImageText extends StatelessWidget {
             Container(
               width: 56,
               height: 56,
-              padding: const EdgeInsets.all(AppSizes.cardRadiusMd),
+              padding: const EdgeInsets.all(AppSizes.sm),
               decoration: BoxDecoration(
-                color:  AppColors.white,
+                color: backgroundColor ?? Colors.transparent,
                 borderRadius: BorderRadius.circular(100),
               ),
-              child: Center(
-                child: isNetworkImage
-                    ? CachedNetworkImage(
-                        errorWidget: (context, url, error) =>
-                            const Icon(Icons.error),
-                        imageUrl: image,
-                        fit: BoxFit.cover,
-                        progressIndicatorBuilder:
-                            (context, url, downloadProgress) =>
-                                const ShimmerEffect(
-                          width: 55,
-                          height: 55,
-                          radius: 55,
+              child: isNetworkImage
+                  ? CachedNetworkImage(
+                      imageUrl: image,
+                      fit: BoxFit.cover,
+                      errorWidget: (context, url, error) => const Icon(Icons.error),
+                      progressIndicatorBuilder: (context, url, progress) => Center(
+                        child: CircularProgressIndicator(
+                          value: progress.progress,
                         ),
-                      )
-                    : Image(
-                        height: 34,
-                        width: 34,
-                        image: AssetImage(image),
-                        fit: BoxFit.cover,
-                        ),
-              ),
+                      ),
+                    )
+                  : Image.asset(
+                      image,
+                      fit: BoxFit.cover,
+                    ),
             ),
-            const SizedBox(
-              height: AppSizes.spaceBtwItems / 2,
-            ),
+            const SizedBox(height: AppSizes.spaceBtwItems / 2),
+
             SizedBox(
               width: 55,
               child: Text(
-                textAlign: TextAlign.center,
                 title,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelMedium!
-                    .apply(color: textColor),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: textColor,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
-            )
+            ),
           ],
         ),
       ),

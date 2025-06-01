@@ -1,84 +1,171 @@
-import 'dart:convert';
-
-class PaymentModel {
-  final String id; // Maps to _id
-  final String order; // Maps to order ID
-  final String user; // Maps to user ID
-  final String paymentMethod; // Maps to paymentMethod ID
-  final String? transactionId; // Required for non-COD paid payments
+class Payment {
+  final String id;
+  final String orderId;
+  final String userId;
+  final String method;
   final double amount;
-  final String status; // 'pending', 'paid', 'failed'
-  final DateTime? paymentTime;
-  final Map<String, dynamic>? gatewayResponse;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
+  final String status;
+  final String? transactionId;
+  final Map<String, dynamic>? paymentDetails;
+  final DateTime? paidAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  PaymentModel({
+  Payment({
     required this.id,
-    required this.order,
-    required this.user,
-    required this.paymentMethod,
-    this.transactionId,
+    required this.orderId,
+    required this.userId,
+    required this.method,
     required this.amount,
-    this.status = 'pending',
-    this.paymentTime,
-    this.gatewayResponse,
-    this.createdAt,
-    this.updatedAt,
+    required this.status,
+    this.transactionId,
+    this.paymentDetails,
+    this.paidAt,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
-  // Convert PaymentModel to JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'order': order,
-      'user': user,
-      'paymentMethod': paymentMethod,
-      if (transactionId != null) 'transactionId': transactionId,
-      'amount': amount,
-      'status': status,
-      if (paymentTime != null) 'paymentTime': paymentTime!.toIso8601String(),
-      if (gatewayResponse != null) 'gatewayResponse': gatewayResponse,
-      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
-      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
-    };
-  }
-
-  // Create PaymentModel from JSON
-  factory PaymentModel.fromJson(Map<String, dynamic> json) {
-    return PaymentModel(
-      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
-      order: json['order']?.toString() ?? '',
-      user: json['user']?.toString() ?? '',
-      paymentMethod: json['paymentMethod']?.toString() ?? '',
+  factory Payment.fromJson(Map<String, dynamic> json) {
+    return Payment(
+      id: json['_id'],
+      orderId: json['orderId'],
+      userId: json['userId'],
+      method: json['method'],
+      amount: json['amount'].toDouble(),
+      status: json['status'],
       transactionId: json['transactionId'],
-      amount: (json['amount'] ?? 0).toDouble(),
-      status: json['status'] ?? 'pending',
-      paymentTime: json['paymentTime'] != null ? DateTime.parse(json['paymentTime']) : null,
-      gatewayResponse: json['gatewayResponse'] != null ? Map<String, dynamic>.from(json['gatewayResponse']) : null,
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      paymentDetails: json['paymentDetails'],
+      paidAt: json['paidAt'] != null ? DateTime.parse(json['paidAt']) : null,
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: DateTime.parse(json['updatedAt']),
     );
   }
 
-  // Static empty method
-  static PaymentModel empty() => PaymentModel(
-        id: '',
-        order: '',
-        user: '',
-        paymentMethod: '',
-        amount: 0.0,
-      );
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'orderId': orderId,
+      'userId': userId,
+      'method': method,
+      'amount': amount,
+      'status': status,
+      'transactionId': transactionId,
+      'paymentDetails': paymentDetails,
+      'paidAt': paidAt?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
 
-  // Convert to JSON string
-  String toJsonString() => jsonEncode(toJson());
-
-  // Create from JSON string
-  static PaymentModel fromJsonString(String jsonString) {
-    try {
-      return PaymentModel.fromJson(jsonDecode(jsonString));
-    } catch (e) {
-      throw FormatException('Invalid JSON string: $e');
-    }
+  Payment copyWith({
+    String? id,
+    String? orderId,
+    String? userId,
+    String? method,
+    double? amount,
+    String? status,
+    String? transactionId,
+    Map<String, dynamic>? paymentDetails,
+    DateTime? paidAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Payment(
+      id: id ?? this.id,
+      orderId: orderId ?? this.orderId,
+      userId: userId ?? this.userId,
+      method: method ?? this.method,
+      amount: amount ?? this.amount,
+      status: status ?? this.status,
+      transactionId: transactionId ?? this.transactionId,
+      paymentDetails: paymentDetails ?? this.paymentDetails,
+      paidAt: paidAt ?? this.paidAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
   }
 }
+
+class Refund {
+  final String id;
+  final String paymentId;
+  final String orderId;
+  final String userId;
+  final double amount;
+  final String status;
+  final String? reason;
+  final DateTime? processedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  Refund({
+    required this.id,
+    required this.paymentId,
+    required this.orderId,
+    required this.userId,
+    required this.amount,
+    required this.status,
+    this.reason,
+    this.processedAt,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory Refund.fromJson(Map<String, dynamic> json) {
+    return Refund(
+      id: json['_id'],
+      paymentId: json['paymentId'],
+      orderId: json['orderId'],
+      userId: json['userId'],
+      amount: json['amount'].toDouble(),
+      status: json['status'],
+      reason: json['reason'],
+      processedAt: json['processedAt'] != null
+          ? DateTime.parse(json['processedAt'])
+          : null,
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: DateTime.parse(json['updatedAt']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'paymentId': paymentId,
+      'orderId': orderId,
+      'userId': userId,
+      'amount': amount,
+      'status': status,
+      'reason': reason,
+      'processedAt': processedAt?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  Refund copyWith({
+    String? id,
+    String? paymentId,
+    String? orderId,
+    String? userId,
+    double? amount,
+    String? status,
+    String? reason,
+    DateTime? processedAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Refund(
+      id: id ?? this.id,
+      paymentId: paymentId ?? this.paymentId,
+      orderId: orderId ?? this.orderId,
+      userId: userId ?? this.userId,
+      amount: amount ?? this.amount,
+      status: status ?? this.status,
+      reason: reason ?? this.reason,
+      processedAt: processedAt ?? this.processedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+} 

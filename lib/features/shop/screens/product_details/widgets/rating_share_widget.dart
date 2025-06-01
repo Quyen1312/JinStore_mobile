@@ -1,12 +1,16 @@
+// File: lib/features/shop/screens/product_details/widgets/rating_share_widget.dart
 import 'package:flutter/material.dart';
-import 'package:iconsax/iconsax.dart';
-
-import '../../../../../utils/constants/sizes.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart'; // Sửa import cho đúng
+import 'package:flutter_application_jin/features/shop/models/product_model.dart'; // Import ProductModel
+import 'package:flutter_application_jin/utils/constants/sizes.dart';
 
 class RatingAndShare extends StatelessWidget {
   const RatingAndShare({
     super.key,
+    required this.product, // Thêm tham số product
   });
+
+  final ProductModel product; // Khai báo product
 
   @override
   Widget build(BuildContext context) {
@@ -16,24 +20,21 @@ class RatingAndShare extends StatelessWidget {
         // Rating
         Row(
           children: [
-            const Icon(Iconsax.star5, color: Colors.amber, size: 24),
+            const Icon(Iconsax.star_1, color: Colors.amber, size: 24), // Sử dụng star_1 nếu muốn icon đầy sao
             const SizedBox(width: AppSizes.spaceBtwItems / 2),
             Text.rich(
               TextSpan(
                 children: [
                   TextSpan(
-                      text: '5.0',
-                      style: Theme.of(context).textTheme.bodyLarge),
-                  const TextSpan(text: '(199)'),
+                    // Sử dụng product.rating, định dạng 1 chữ số sau dấu phẩy
+                    text: product.averageRating.toStringAsFixed(1),
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
                 ],
               ),
             ),
           ],
         ),
-        // Share Button
-        IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.share, size: AppSizes.iconMd)),
       ],
     );
   }
