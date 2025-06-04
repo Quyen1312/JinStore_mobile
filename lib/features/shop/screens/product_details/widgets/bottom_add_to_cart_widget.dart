@@ -86,7 +86,8 @@ class BottomAddToCartWidget extends StatelessWidget { // Đổi tên class cho n
           ),
           ElevatedButton(
             onPressed: product.quantity > 0 ? () {
-              cartController.addToCart(product.id, quantity.value);
+              // Sửa cách gọi addToCart: truyền toàn bộ object product và sử dụng named parameter quantity
+              cartController.addItemToCart(product, quantity: quantity.value);
               // Có thể reset quantity về 1 sau khi thêm, hoặc giữ nguyên để user có thể tiếp tục tăng/giảm và cập nhật
               // quantity.value = 1; // Nếu muốn reset
               Loaders.successSnackBar(title: 'Thành công', message: '${product.name} (x${quantity.value}) đã được thêm vào giỏ hàng.');

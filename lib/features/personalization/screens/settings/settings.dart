@@ -38,7 +38,7 @@ class SettingsScreen extends StatelessWidget {
                           .headlineMedium!
                           .apply(color: AppColors.white),
                     ),
-                    showBackArrow: true, // Thêm nút back nếu SettingsScreen không phải là tab chính
+                    showBackArrow: false, // Thêm nút back nếu SettingsScreen không phải là tab chính
                     // Hoặc nếu là tab chính thì không cần showBackArrow và title có thể căn giữa hoặc trái
                   ),
 

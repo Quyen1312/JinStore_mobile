@@ -18,6 +18,7 @@ class _SignupFormState extends State<SignupForm> {
   final GlobalKey<FormState> _signupFormKey = GlobalKey<FormState>();
 
   final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _userNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
@@ -49,8 +50,10 @@ class _SignupFormState extends State<SignupForm> {
 
     authController.register(
       fullname: _fullNameController.text.trim(),
+      username: _userNameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
+      confirmPassword: _confirmPasswordController.text.trim(),
     );
   }
 

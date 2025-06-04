@@ -60,7 +60,7 @@ class ProductDetailScreen extends StatelessWidget { // Đổi tên class từ Pr
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // -- Rating & Share
-                  RatingAndShare(product: product),
+                  RatingWidget(product: product),
                   const SizedBox(height: AppSizes.spaceBtwItems),
 
                   // -- Price, Title, Stock, Brand (trong ProductMetaData)

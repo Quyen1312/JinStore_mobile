@@ -12,7 +12,7 @@ class OrderScreen extends StatelessWidget {
     return Scaffold(
       appBar: Appbar(
         title: Text(
-          'My Orders',
+          'Đơn hàng của tôi',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         showBackArrow: true,

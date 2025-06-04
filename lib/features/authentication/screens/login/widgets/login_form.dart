@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_jin/features/authentication/controllers/auth/auth_controller.dart';
-import 'package:flutter_application_jin/features/authentication/screens/password_configuration/reset_password.dart';
 import 'package:flutter_application_jin/features/authentication/screens/signup/signup.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
 import 'package:flutter_application_jin/utils/validators/validators.dart';
@@ -63,7 +62,7 @@ class _LoginFormState extends State<LoginForm> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () => Get.to(() => ResetPasswordScreen()),
+                onPressed: () {},
                 child: const Text('Quên mật khẩu?'),
               ),
             ),

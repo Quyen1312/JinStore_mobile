@@ -1,13 +1,16 @@
+import 'dart:convert'; // Cần thiết nếu paymentDetails là JSON string
+
 class Payment {
-  final String id;
-  final String orderId;
-  final String userId;
-  final String method;
+  final String id; // Từ _id của Mongoose
+  final String orderId; // Từ 'order' (ObjectId) của backend
+  final String userId; // Từ 'user' (ObjectId) của backend
+  final String method; // Từ '_orderPaymentMethod' của backend
   final double amount;
-  final String status;
+  final String status; // enum: ['pending', 'paid', 'failed']
   final String? transactionId;
-  final Map<String, dynamic>? paymentDetails;
-  final DateTime? paidAt;
+  final Map<String, dynamic>?
+      paymentDetails; // Từ 'vnpayResponse' (Mixed) của backend
+  final DateTime? paidAt; // Từ 'paymentTime' của backend
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -26,32 +29,80 @@ class Payment {
   });
 
   factory Payment.fromJson(Map<String, dynamic> json) {
+    // Kiểm tra các trường bắt buộc dựa trên schema backend
+    if (!json.containsKey('_id')) {
+      throw ArgumentError("JSON cho Payment phải chứa '_id'");
+    }
+    if (!json.containsKey('order')) {
+      throw ArgumentError("JSON cho Payment phải chứa 'order' (là orderId)");
+    }
+    if (!json.containsKey('user')) {
+      throw ArgumentError("JSON cho Payment phải chứa 'user' (là userId)");
+    }
+    if (!json.containsKey('_orderPaymentMethod')) {
+      throw ArgumentError(
+          "JSON cho Payment phải chứa '_orderPaymentMethod' (là method)");
+    }
+    if (!json.containsKey('amount')) {
+      throw ArgumentError("JSON cho Payment phải chứa 'amount'");
+    }
+    // status có default ở backend
+    if (!json.containsKey('createdAt')) {
+      throw ArgumentError("JSON cho Payment phải chứa 'createdAt'");
+    }
+    if (!json.containsKey('updatedAt')) {
+      throw ArgumentError("JSON cho Payment phải chứa 'updatedAt'");
+    }
+
+    Map<String, dynamic>? parsedPaymentDetails;
+    if (json['vnpayResponse'] != null) {
+      if (json['vnpayResponse'] is String) {
+        // Nếu vnpayResponse là một chuỗi JSON, parse nó
+        try {
+          parsedPaymentDetails =
+              jsonDecode(json['vnpayResponse'] as String) as Map<String, dynamic>?;
+        } catch (e) {
+          print(
+              "Lỗi khi parse vnpayResponse (String): $e. Để nguyên là null.");
+          parsedPaymentDetails = null;
+        }
+      } else if (json['vnpayResponse'] is Map) {
+        // Nếu đã là Map rồi
+        parsedPaymentDetails =
+            Map<String, dynamic>.from(json['vnpayResponse'] as Map);
+      }
+    }
+
     return Payment(
-      id: json['_id'],
-      orderId: json['orderId'],
-      userId: json['userId'],
-      method: json['method'],
-      amount: json['amount'].toDouble(),
-      status: json['status'],
-      transactionId: json['transactionId'],
-      paymentDetails: json['paymentDetails'],
-      paidAt: json['paidAt'] != null ? DateTime.parse(json['paidAt']) : null,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      id: json['_id'] as String,
+      orderId: json['order'] as String, // Backend dùng 'order' cho orderId
+      userId: json['user'] as String, // Backend dùng 'user' cho userId
+      method: json['_orderPaymentMethod']
+          as String, // Backend dùng '_orderPaymentMethod'
+      amount: (json['amount'] as num).toDouble(),
+      status: json['status'] as String? ??
+          'pending', // Sử dụng default từ schema nếu null
+      transactionId: json['transactionId'] as String?,
+      paymentDetails: parsedPaymentDetails, // Backend dùng 'vnpayResponse'
+      paidAt: json['paymentTime'] == null
+          ? null
+          : DateTime.parse(json['paymentTime'] as String), // Backend dùng 'paymentTime'
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       '_id': id,
-      'orderId': orderId,
-      'userId': userId,
-      'method': method,
+      'order': orderId, // Gửi lại 'order' cho backend
+      'user': userId, // Gửi lại 'user' cho backend
+      '_orderPaymentMethod': method, // Gửi lại '_orderPaymentMethod' cho backend
       'amount': amount,
       'status': status,
       'transactionId': transactionId,
-      'paymentDetails': paymentDetails,
-      'paidAt': paidAt?.toIso8601String(),
+      'vnpayResponse': paymentDetails, // Gửi lại 'vnpayResponse' cho backend
+      'paymentTime': paidAt?.toIso8601String(), // Gửi lại 'paymentTime' cho backend
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -86,6 +137,7 @@ class Payment {
   }
 }
 
+// Lớp Refund được giữ nguyên vì schema backend cho nó không được cung cấp trong Payment.js
 class Refund {
   final String id;
   final String paymentId;
@@ -113,18 +165,18 @@ class Refund {
 
   factory Refund.fromJson(Map<String, dynamic> json) {
     return Refund(
-      id: json['_id'],
-      paymentId: json['paymentId'],
-      orderId: json['orderId'],
-      userId: json['userId'],
-      amount: json['amount'].toDouble(),
-      status: json['status'],
-      reason: json['reason'],
-      processedAt: json['processedAt'] != null
-          ? DateTime.parse(json['processedAt'])
-          : null,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      id: json['_id'] as String,
+      paymentId: json['paymentId'] as String,
+      orderId: json['orderId'] as String,
+      userId: json['userId'] as String,
+      amount: (json['amount'] as num).toDouble(),
+      status: json['status'] as String,
+      reason: json['reason'] as String?,
+      processedAt: json['processedAt'] == null
+          ? null
+          : DateTime.parse(json['processedAt'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
   }
 
@@ -168,4 +220,4 @@ class Refund {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
-} 
+}

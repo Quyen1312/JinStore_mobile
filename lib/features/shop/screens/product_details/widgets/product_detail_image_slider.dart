@@ -5,7 +5,8 @@ import 'package:flutter_application_jin/features/shop/models/product_model.dart'
 import 'package:flutter_application_jin/utils/constants/colors.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
 import 'package:flutter_application_jin/utils/helpers/helper_functions.dart';
-import 'package:get/get.dart'; 
+import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
 
 class ProductDetailImageSlider extends StatelessWidget {
   const ProductDetailImageSlider({
@@ -18,44 +19,102 @@ class ProductDetailImageSlider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = HelperFunctions.isDarkMode(context);
-    // Sử dụng GetX để quản lý ảnh được chọn hiển thị lớn
-    final RxString selectedImageUrl = (product.images.isNotEmpty ? product.images[0].url : '').obs;
+    
+    // ✅ Fix: Kiểm tra product.images null và empty
+    final hasImages = product.images != null && product.images!.isNotEmpty;
+    final defaultImageUrl = hasImages ? product.images!.first.url : '';
+    
+    // ✅ Fix: Khởi tạo với giá trị an toàn
+    final RxString selectedImageUrl = defaultImageUrl.obs;
 
-    return CurvedEdgesWidget( // Widget bo cong các cạnh dưới của header
+    // Debug logging
+    print('🛍️ ProductDetailImageSlider Debug:');
+    print('- Has images: $hasImages');
+    print('- Images count: ${product.images?.length ?? 0}');
+    print('- Default image URL: $defaultImageUrl');
+
+    return CurvedEdgesWidget(
       child: Container(
         color: dark ? AppColors.darkerGrey : AppColors.light,
         child: Stack(
           children: [
             // -- Main Large Image
             SizedBox(
-              height: 400, // Chiều cao của ảnh lớn
+              height: 400,
               child: Padding(
                 padding: const EdgeInsets.all(AppSizes.productImageRadius * 2),
                 child: Center(
-                  child: Obx(() => Image.network( // Hiển thị ảnh được chọn
-                        selectedImageUrl.value.isNotEmpty
-                            ? selectedImageUrl.value
-                            : (product.images.isNotEmpty ? product.images[0].url : ''), // Ảnh mặc định nếu selected rỗng
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Center(child: Icon(Icons.image_not_supported, size: 100, color: AppColors.grey)),
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                  : null,
+                  child: Obx(() {
+                    final imageUrl = selectedImageUrl.value.isNotEmpty 
+                        ? selectedImageUrl.value 
+                        : defaultImageUrl;
+                    
+                    print('🖼️ Displaying main image: $imageUrl');
+                    
+                    // ✅ Fix: Hiển thị placeholder nếu không có ảnh
+                    if (imageUrl.isEmpty) {
+                      return Container(
+                        height: 300,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: dark ? AppColors.dark : AppColors.light,
+                          borderRadius: BorderRadius.circular(AppSizes.productImageRadius),
+                          border: Border.all(color: AppColors.grey.withOpacity(0.3)),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Iconsax.image,
+                              size: 100,
+                              color: AppColors.grey,
                             ),
-                          );
-                        },
-                      )),
+                            SizedBox(height: 16),
+                            Text(
+                              'Không có hình ảnh',
+                              style: TextStyle(color: AppColors.grey),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    // ✅ Sử dụng RoundedImage với network image
+                    return RoundedImage(
+                      imageUrl: imageUrl,
+                      width: double.infinity,
+                      height: 300,
+                      isNetworkImage: true,
+                      fit: BoxFit.contain,
+                      backgroundColor: dark ? AppColors.dark : AppColors.white,
+                      borderRadius: AppSizes.productImageRadius,
+                      applyImageRadius: true,
+                    );
+                  }),
                 ),
               ),
             ),
 
-            // -- Image Slider (thumbnail images)
-            if (product.images.length > 1) // Chỉ hiển thị slider nếu có nhiều hơn 1 ảnh
+            // -- Back Button
+            Positioned(
+              top: 50,
+              left: 20,
+              child: CircleAvatar(
+                backgroundColor: dark 
+                    ? AppColors.black.withOpacity(0.7) 
+                    : AppColors.white.withOpacity(0.8),
+                child: IconButton(
+                  onPressed: () => Get.back(),
+                  icon: Icon(
+                    Iconsax.arrow_left,
+                    color: dark ? AppColors.white : AppColors.black,
+                  ),
+                ),
+              ),
+            ),
+
+            // ✅ Fix: Image Slider (thumbnail images) - Sử dụng RoundedImage
+            if (hasImages && product.images!.length > 1)
               Positioned(
                 right: 0,
                 bottom: 30,
@@ -66,23 +125,37 @@ class ProductDetailImageSlider extends StatelessWidget {
                     shrinkWrap: true,
                     scrollDirection: Axis.horizontal,
                     physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: product.images.length,
+                    itemCount: product.images!.length,
                     separatorBuilder: (_, __) =>
                         const SizedBox(width: AppSizes.spaceBtwItems),
                     itemBuilder: (_, index) {
-                      final imageUrl = product.images[index].url;
+                      final imageUrl = product.images![index].url;
+                      print('🔄 Building thumbnail $index: $imageUrl');
+                      
                       return Obx(() {
                         final isSelected = selectedImageUrl.value == imageUrl;
+                        
                         return RoundedImage(
-                          width: 80,
-                          isNetworkImage: true,
                           imageUrl: imageUrl,
-                          fit: BoxFit.contain,
+                          width: 80,
+                          height: 80,
+                          isNetworkImage: true,
+                          fit: BoxFit.cover,
                           backgroundColor: dark ? AppColors.dark : AppColors.white,
-                          // Thêm viền cho ảnh được chọn
-                          border: isSelected ? Border.all(color: AppColors.primary, width: 2) : null,
-                          padding: const EdgeInsets.all(AppSizes.sm),
-                          onTap: () => selectedImageUrl.value = imageUrl, // Cập nhật ảnh được chọn
+                          borderRadius: AppSizes.productImageRadius,
+                          applyImageRadius: true,
+                          // ✅ Highlight selected image với border
+                          border: Border.all(
+                            color: isSelected 
+                                ? AppColors.primary 
+                                : AppColors.grey.withOpacity(0.3),
+                            width: isSelected ? 2 : 1,
+                          ),
+                          padding: const EdgeInsets.all(AppSizes.xs),
+                          onTap: () {
+                            print('👆 Thumbnail tapped: $imageUrl');
+                            selectedImageUrl.value = imageUrl;
+                          },
                         );
                       });
                     },

@@ -1,5 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_application_jin/features/shop/models/category_model.dart';
-import 'package:flutter_application_jin/service/category/category_service.dart';
+import 'package:flutter_application_jin/service/category_service.dart';
 import 'package:flutter_application_jin/utils/popups/loaders.dart';
 import 'package:get/get.dart';
 
@@ -19,53 +20,124 @@ class CategoryController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchAllCategories();
+    // ✅ Sử dụng addPostFrameCallback để tránh setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      fetchAllCategories();
+    });
   }
 
   Future<void> fetchAllCategories() async {
-  try {
-    isLoading.value = true;
-    categoryList.clear();
+    try {
+      // ✅ Prevent multiple simultaneous calls
+      if (isLoading.value) {
+        print('[CategoryController] ⚠️ Already loading categories, skipping...');
+        return;
+      }
 
-    final data = await categoryService.getAllCategories(); // Không còn statusCode
+      isLoading.value = true;
+      categoryList.clear();
+      error.value = '';
 
-    final categories = data
-        .map((e) => Category.fromJson(e as Map<String, dynamic>))
-        .toList();
-    categoryList.assignAll(categories);
-    } catch (e) {
-    Loaders.errorSnackBar(
-      title: 'Ôi không!',
-      message: 'Lỗi tải danh mục: ${e.toString()}',
-    );
-  } finally {
-    isLoading.value = false;
+      print('[CategoryController] 🔍 Fetching all categories...');
+
+      // ✅ Giữ nguyên logic gọi service như cũ
+      final data = await categoryService.getAllCategories();
+      print('[CategoryController] 📦 Received ${data.length} categories from service');
+
+      // ✅ Giữ nguyên logic parse như cũ
+      final categories = data
+          .map((e) => Category.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      // ✅ Sử dụng addPostFrameCallback để assign data
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        categoryList.assignAll(categories);
+      });
+
+      print('[CategoryController] ✅ Successfully loaded ${categories.length} categories');
+
+    } catch (e, stackTrace) {
+      error.value = 'Lỗi tải danh mục: ${e.toString()}';
+      print('[CategoryController] ❌ Error in fetchAllCategories: $e');
+      
+      // ✅ Sử dụng addPostFrameCallback cho error handling
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Loaders.errorSnackBar(
+          title: 'Ôi không!',
+          message: 'Lỗi tải danh mục: ${e.toString()}',
+        );
+      });
+    } finally {
+      // ✅ Sử dụng addPostFrameCallback để set loading = false
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        isLoading.value = false;
+      });
+    }
   }
-}
-
 
   Future<void> fetchCategoryById(String categoryId) async {
-  try {
-    isLoadingSingleCategory.value = true;
-    singleCategory.value = null;
+    try {
+      // ✅ Prevent multiple simultaneous calls
+      if (isLoadingSingleCategory.value) {
+        print('[CategoryController] ⚠️ Already loading single category, skipping...');
+        return;
+      }
 
-    final data = await categoryService.getCategoryById(categoryId);
+      isLoadingSingleCategory.value = true;
+      singleCategory.value = null;
+      error.value = '';
 
-    if (data.containsKey('_id')) {
-      singleCategory.value = Category.fromJson(data);
-    } else {
-      Loaders.errorSnackBar(
-        title: 'Lỗi dữ liệu',
-        message: 'Không tìm thấy hoặc định dạng dữ liệu chi tiết danh mục không đúng.',
-      );
+      print('[CategoryController] 🔍 Fetching category by ID: $categoryId');
+
+      // ✅ Giữ nguyên logic gọi service như cũ
+      final data = await categoryService.getCategoryById(categoryId);
+
+      if (data.containsKey('_id')) {
+        final category = Category.fromJson(data);
+        
+        // ✅ Sử dụng addPostFrameCallback để assign data
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          singleCategory.value = category;
+        });
+
+        print('[CategoryController] ✅ Successfully loaded category: ${category.name}');
+      } else {
+        throw Exception('Không tìm thấy hoặc định dạng dữ liệu chi tiết danh mục không đúng.');
+      }
+
+    } catch (e, stackTrace) {
+      error.value = 'Lỗi tải chi tiết danh mục: ${e.toString()}';
+      print('[CategoryController] ❌ Error in fetchCategoryById: $e');
+      
+      // ✅ Sử dụng addPostFrameCallback cho error handling
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Loaders.errorSnackBar(
+          title: 'Ôi không!',
+          message: 'Lỗi tải chi tiết danh mục: ${e.toString()}',
+        );
+      });
+    } finally {
+      // ✅ Sử dụng addPostFrameCallback để set loading = false
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        isLoadingSingleCategory.value = false;
+      });
     }
-  } catch (e) {
-    Loaders.errorSnackBar(
-      title: 'Ôi không!',
-      message: 'Lỗi tải chi tiết danh mục: ${e.toString()}',
-    );
-  } finally {
-    isLoadingSingleCategory.value = false;
   }
-}
+
+  /// ✅ Thêm helper methods mà không thay đổi core logic
+  void refreshCategories() {
+    fetchAllCategories();
+  }
+
+  void clearError() {
+    error.value = '';
+  }
+
+  Category? getCategoryFromCache(String categoryId) {
+    try {
+      return categoryList.firstWhere((c) => c.id == categoryId);
+    } catch (e) {
+      return null;
+    }
+  }
 }

@@ -1,152 +1,295 @@
-class OrderItem {
-  final String productId;
-  final String name;
-  final double price;
-  final int quantity;
-  final double? discount;
+// order_model.dart
+import 'package:flutter_application_jin/features/shop/models/product_model.dart';
+import 'package:flutter_application_jin/features/personalization/models/user_model.dart';
+import 'package:flutter_application_jin/features/personalization/models/address_model.dart';
 
-  OrderItem({
+// Model cho từng sản phẩm trong đơn hàng, khớp với orderItemSchema của backend
+class OrderItemModel {
+  final String productId; // Tương ứng với _idProduct từ backend
+  final String name;      // Tên sản phẩm tại thời điểm mua
+  final double price;     // Giá tại thời điểm mua
+  final int quantity;
+  
+  // Optional populated product data
+  final ProductModel? productDetails;
+
+  OrderItemModel({
     required this.productId,
     required this.name,
     required this.price,
     required this.quantity,
-    this.discount,
+    this.productDetails,
   });
 
-  factory OrderItem.fromJson(Map<String, dynamic> json) {
-    return OrderItem(
-      productId: json['productId'],
-      name: json['name'],
-      price: json['price'].toDouble(),
-      quantity: json['quantity'],
-      discount: json['discount']?.toDouble(),
+  // Helper methods for populated data
+  String get displayName => productDetails?.name ?? name;
+  List<ImageModel> get images => productDetails?.images ?? [];
+  String get unit => productDetails?.unit ?? '';
+  double get currentPrice => productDetails?.price ?? price;
+  bool get isAvailable => productDetails?.isAvailable ?? true;
+  int get availableStock => productDetails?.quantity ?? 0;
+
+  factory OrderItemModel.fromJson(Map<String, dynamic> json) {
+    // Required fields validation
+    if (!json.containsKey('_idProduct')) {
+      throw ArgumentError("JSON cho OrderItemModel phải chứa '_idProduct'");
+    }
+    if (!json.containsKey('name')) {
+      throw ArgumentError("JSON cho OrderItemModel phải chứa 'name'");
+    }
+    if (!json.containsKey('price')) {
+      throw ArgumentError("JSON cho OrderItemModel phải chứa 'price'");
+    }
+    if (!json.containsKey('quantity')) {
+      throw ArgumentError("JSON cho OrderItemModel phải chứa 'quantity'");
+    }
+
+    // Handle _idProduct field - String hoặc Object
+    String productId;
+    ProductModel? productDetails;
+    
+    final idProductField = json['_idProduct'];
+    if (idProductField is String) {
+      // Non-populated case
+      productId = idProductField;
+      productDetails = null;
+    } else if (idProductField is Map<String, dynamic>) {
+      // Populated case
+      productId = idProductField['_id'] as String;
+      try {
+        productDetails = ProductModel.fromJson(idProductField);
+      } catch (e) {
+        print('Warning: Failed to parse populated product data: $e');
+        productDetails = null;
+      }
+    } else {
+      throw ArgumentError("Invalid _idProduct field type: ${idProductField.runtimeType}");
+    }
+
+    return OrderItemModel(
+      productId: productId,
+      name: json['name'] as String,
+      price: (json['price'] as num).toDouble(),
+      quantity: json['quantity'] as int,
+      productDetails: productDetails,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'productId': productId,
+      '_idProduct': productId,
       'name': name,
       'price': price,
       'quantity': quantity,
-      'discount': discount,
     };
   }
 
-  double get total {
-    if (discount != null && discount! > 0) {
-      return (price - (price * discount! / 100)) * quantity;
-    }
-    return price * quantity;
+  OrderItemModel copyWith({
+    String? productId,
+    String? name,
+    double? price,
+    int? quantity,
+    ProductModel? productDetails,
+  }) {
+    return OrderItemModel(
+      productId: productId ?? this.productId,
+      name: name ?? this.name,
+      price: price ?? this.price,
+      quantity: quantity ?? this.quantity,
+      productDetails: productDetails ?? this.productDetails,
+    );
   }
 }
 
-class Order {
-  final String id;
-  final String userId;
-  final List<OrderItem> items;
-  final String shippingAddress;
-  final String paymentMethod;
+// Model cho đơn hàng, khớp với orderSchema của backend
+class OrderModel {
+  final String id; // Tương ứng với _id của document Order
+  final String userId; // Tương ứng với _idUser
+  final String? discountId; // Tương ứng với discount (ObjectId ref: 'Discount'), có thể null
+  final List<OrderItemModel> orderItems;
+  final String shippingAddress; // Tương ứng với shippingAddress (ObjectId ref: 'Address')
+  final double shippingFee;
+  final String paymentMethod; // enum: ['vnpay', 'cod']
   final double totalAmount;
-  final String status;
-  final String? paymentId;
   final bool isPaid;
-  final DateTime? paidAt;
-  final bool isDelivered;
-  final DateTime? deliveredAt;
+  final DateTime? paidAt; // Có thể null
+  final String status; // enum: ['pending', 'paid', ..., 'cancelled']
+  final String? note; // Tùy chọn
   final DateTime createdAt;
   final DateTime updatedAt;
+  
+  // Optional populated data
+  final User? userDetails;
+  final Address? addressDetails;
 
-  Order({
+  OrderModel({
     required this.id,
     required this.userId,
-    required this.items,
+    this.discountId,
+    required this.orderItems,
     required this.shippingAddress,
+    required this.shippingFee,
     required this.paymentMethod,
     required this.totalAmount,
-    required this.status,
-    this.paymentId,
     required this.isPaid,
     this.paidAt,
-    required this.isDelivered,
-    this.deliveredAt,
+    required this.status,
+    this.note,
     required this.createdAt,
     required this.updatedAt,
+    this.userDetails,
+    this.addressDetails,
   });
 
-  factory Order.fromJson(Map<String, dynamic> json) {
-    return Order(
-      id: json['_id'],
-      userId: json['userId'],
-      items: (json['items'] as List)
-          .map((item) => OrderItem.fromJson(item))
-          .toList(),
-      shippingAddress: json['shippingAddress'],
-      paymentMethod: json['paymentMethod'],
-      totalAmount: json['totalAmount'].toDouble(),
-      status: json['status'],
-      paymentId: json['paymentId'],
-      isPaid: json['isPaid'],
-      paidAt: json['paidAt'] != null ? DateTime.parse(json['paidAt']) : null,
-      isDelivered: json['isDelivered'],
-      deliveredAt: json['deliveredAt'] != null
-          ? DateTime.parse(json['deliveredAt'])
-          : null,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+  // Helper methods for populated data
+  String get customerName => userDetails?.fullname ?? 'Unknown Customer';
+  String get customerPhone => userDetails?.phone ?? '';
+  String get customerEmail => userDetails?.email ?? '';
+  String get shippingAddressText => addressDetails?.formattedAddress ?? shippingAddress;
+  bool get hasCompleteUserInfo => userDetails != null;
+  bool get hasCompleteAddressInfo => addressDetails != null;
+
+  factory OrderModel.fromJson(Map<String, dynamic> json) {
+    // Required fields validation
+    if (!json.containsKey('_id')) throw ArgumentError("JSON cho OrderModel phải chứa '_id'");
+    if (!json.containsKey('_idUser')) throw ArgumentError("JSON cho OrderModel phải chứa '_idUser'");
+    if (!json.containsKey('orderItems')) throw ArgumentError("JSON cho OrderModel phải chứa 'orderItems'");
+    if (!json.containsKey('shippingAddress')) throw ArgumentError("JSON cho OrderModel phải chứa 'shippingAddress'");
+    if (!json.containsKey('shippingFee')) throw ArgumentError("JSON cho OrderModel phải chứa 'shippingFee'");
+    if (!json.containsKey('paymentMethod')) throw ArgumentError("JSON cho OrderModel phải chứa 'paymentMethod'");
+    if (!json.containsKey('totalAmount')) throw ArgumentError("JSON cho OrderModel phải chứa 'totalAmount'");
+    if (!json.containsKey('status')) throw ArgumentError("JSON cho OrderModel phải chứa 'status'");
+    if (!json.containsKey('createdAt')) throw ArgumentError("JSON cho OrderModel phải chứa 'createdAt'");
+    if (!json.containsKey('updatedAt')) throw ArgumentError("JSON cho OrderModel phải chứa 'updatedAt'");
+
+    // Handle _idUser field - String hoặc User Object
+    String userId;
+    User? userDetails;
+    
+    final userField = json['_idUser'];
+    if (userField is String) {
+      userId = userField;
+      userDetails = null;
+    } else if (userField is Map<String, dynamic>) {
+      userId = userField['_id'] as String;
+      try {
+        userDetails = User.fromJson(userField);
+      } catch (e) {
+        print('Warning: Failed to parse populated user data: $e');
+        userDetails = null;
+      }
+    } else {
+      throw ArgumentError("Invalid _idUser field type: ${userField.runtimeType}");
+    }
+
+    // Handle shippingAddress field - String hoặc Address Object
+    String shippingAddress;
+    Address? addressDetails;
+    
+    final addressField = json['shippingAddress'];
+    if (addressField is String) {
+      shippingAddress = addressField;
+      addressDetails = null;
+    } else if (addressField is Map<String, dynamic>) {
+      shippingAddress = addressField['_id'] as String;
+      try {
+        addressDetails = Address.fromJson(addressField);
+      } catch (e) {
+        print('Warning: Failed to parse populated address data: $e');
+        addressDetails = null;
+      }
+    } else {
+      throw ArgumentError("Invalid shippingAddress field type: ${addressField.runtimeType}");
+    }
+
+    // Parse orderItems với updated logic
+    var parsedOrderItems = <OrderItemModel>[];
+    if (json['orderItems'] != null && json['orderItems'] is List) {
+      for (var itemJson in json['orderItems'] as List) {
+        try {
+          if (itemJson is Map<String, dynamic>) {
+            parsedOrderItems.add(OrderItemModel.fromJson(itemJson));
+          }
+        } catch (e) {
+          print('Warning: Failed to parse order item: $e');
+        }
+      }
+    }
+
+    return OrderModel(
+      id: json['_id'] as String,
+      userId: userId,
+      userDetails: userDetails,
+      discountId: json['discount'] as String?,
+      orderItems: parsedOrderItems,
+      shippingAddress: shippingAddress,
+      addressDetails: addressDetails,
+      shippingFee: (json['shippingFee'] as num).toDouble(),
+      paymentMethod: json['paymentMethod'] as String,
+      totalAmount: (json['totalAmount'] as num).toDouble(),
+      isPaid: json['isPaid'] as bool? ?? false,
+      paidAt: json['paidAt'] == null ? null : DateTime.parse(json['paidAt'] as String),
+      status: json['status'] as String? ?? 'pending',
+      note: json['note'] as String?,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       '_id': id,
-      'userId': userId,
-      'items': items.map((item) => item.toJson()).toList(),
+      '_idUser': userId,
+      'discount': discountId,
+      'orderItems': orderItems.map((item) => item.toJson()).toList(),
       'shippingAddress': shippingAddress,
+      'shippingFee': shippingFee,
       'paymentMethod': paymentMethod,
       'totalAmount': totalAmount,
-      'status': status,
-      'paymentId': paymentId,
       'isPaid': isPaid,
       'paidAt': paidAt?.toIso8601String(),
-      'isDelivered': isDelivered,
-      'deliveredAt': deliveredAt?.toIso8601String(),
+      'status': status,
+      'note': note,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
-  Order copyWith({
+  OrderModel copyWith({
     String? id,
     String? userId,
-    List<OrderItem>? items,
+    String? discountId,
+    List<OrderItemModel>? orderItems,
     String? shippingAddress,
+    double? shippingFee,
     String? paymentMethod,
     double? totalAmount,
-    String? status,
-    String? paymentId,
     bool? isPaid,
     DateTime? paidAt,
-    bool? isDelivered,
-    DateTime? deliveredAt,
+    String? status,
+    String? note,
     DateTime? createdAt,
     DateTime? updatedAt,
+    User? userDetails,
+    Address? addressDetails,
   }) {
-    return Order(
+    return OrderModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
-      items: items ?? this.items,
+      discountId: discountId ?? this.discountId,
+      orderItems: orderItems ?? this.orderItems,
       shippingAddress: shippingAddress ?? this.shippingAddress,
+      shippingFee: shippingFee ?? this.shippingFee,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       totalAmount: totalAmount ?? this.totalAmount,
-      status: status ?? this.status,
-      paymentId: paymentId ?? this.paymentId,
       isPaid: isPaid ?? this.isPaid,
       paidAt: paidAt ?? this.paidAt,
-      isDelivered: isDelivered ?? this.isDelivered,
-      deliveredAt: deliveredAt ?? this.deliveredAt,
+      status: status ?? this.status,
+      note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      userDetails: userDetails ?? this.userDetails,
+      addressDetails: addressDetails ?? this.addressDetails,
     );
   }
-} 
+}

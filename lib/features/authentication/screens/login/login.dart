@@ -22,27 +22,27 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final dark = HelperFunctions.isDarkMode(context);
 
-    return Scaffold(
+    return const Scaffold(
       body: SingleChildScrollView(
         child: Padding(
             padding: SpacingStyles.paddingWithAppBarHeight,
             child: Column(
               children: [
                 // Logo, Title & Sub title
-                const LoginHeader(),
+                LoginHeader(),
 
                 // Form
                 LoginForm(),
 
                 // Divider
-                const FormDivider(
+                FormDivider(
                   dividerText: 'Or Sign in with',
                 ),
 
-                const SizedBox(height: AppSizes.spaceBtwSections),
+                SizedBox(height: AppSizes.spaceBtwSections),
 
                 // Footer
-                const SocialButtons()
+                SocialButtons()
               ],
             )),
       ),

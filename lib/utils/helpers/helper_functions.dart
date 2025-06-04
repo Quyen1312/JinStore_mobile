@@ -99,6 +99,11 @@ class HelperFunctions {
     return DateFormat(format).format(date);
   }
 
+  static String formatCurrency(double amount) {
+  final formatter = NumberFormat('#,###', 'vi_VN');
+  return '${formatter.format(amount)}đ';
+}
+
   static List<T> removeDuplicates<T>(List<T> list) {
     return list.toSet().toList();
   }

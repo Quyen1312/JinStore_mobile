@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_jin/features/authentication/controllers/auth/auth_controller.dart';
 import 'package:flutter_application_jin/features/personalization/controllers/user_controller.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
 import 'package:flutter_application_jin/utils/validators/validation.dart';
@@ -11,6 +12,7 @@ class ChangePassword extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<UserController>();
+    final _controller = Get.find<AuthController>();
     final currentPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
@@ -138,7 +140,7 @@ class ChangePassword extends StatelessWidget {
                           ? null
                           : () async {
                               if (formKey.currentState!.validate()) {
-                                await controller.updatePassword(
+                                await _controller.changePassword(
                                   currentPassword: currentPasswordController.text.trim(),
                                   newPassword: newPasswordController.text.trim(),
                                   confirmPassword: confirmPasswordController.text.trim(),

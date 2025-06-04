@@ -8,7 +8,7 @@ class SignUpHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      "Let's create your account",
+      "Hãy đăng ký tài khoản của bạn",
       style: Theme.of(context).textTheme.headlineMedium,
     );
   }

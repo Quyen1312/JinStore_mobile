@@ -1,130 +1,245 @@
-// File: lib/features/shop/controllers/review_controller.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_application_jin/utils/helpers/helper_functions.dart';
+import 'package:flutter_application_jin/features/authentication/controllers/auth/auth_controller.dart'; // Để kiểm tra quyền admin
+import 'package:flutter_application_jin/features/shop/models/review_model.dart';
+import 'package:flutter_application_jin/service/review_service.dart';
+import 'package:flutter_application_jin/utils/helpers/helper_functions.dart'; // Cho formatDate
 import 'package:flutter_application_jin/utils/popups/loaders.dart';
 import 'package:get/get.dart';
-import 'package:flutter_application_jin/service/review/review_service.dart';
-import 'package:flutter_application_jin/features/shop/models/review_model.dart'; // Import ReviewModel
-// Import ProductController để có thể cập nhật rating của sản phẩm sau khi có review mới
-import 'package:flutter_application_jin/features/shop/controllers/product_controller.dart';
-
+// Import ProductController nếu cần cập nhật rating sản phẩm sau khi review thay đổi.
+// Tuy nhiên, việc này có thể tạo phụ thuộc vòng nếu ProductController cũng gọi ReviewController.
+// Cách tốt hơn là ProductController tự fetch lại product khi cần.
+// import 'package:flutter_application_jin/features/shop/controllers/product_controller.dart';
 
 class ReviewController extends GetxController {
-  static ReviewController get instance => Get.find(); // Thêm instance getter
+  static ReviewController get instance => Get.find();
 
   final ReviewService _reviewService = Get.find<ReviewService>();
-  final productController = ProductController.instance; // Get ProductController instance
+  final AuthController _authController = Get.find<AuthController>();
+  // final ProductController _productController = ProductController.instance; // Cân nhắc nếu cần
 
   final RxBool isLoading = false.obs;
   final RxString error = ''.obs;
-  // Sử dụng RxList<Review>
-  final RxList<Review> productReviews = <Review>[].obs;
-  final RxList<Review> userReviewsList = <Review>[].obs; // Để lưu review của user
 
-  // Biến theo dõi rating người dùng chọn và comment khi viết review
-  final RxDouble currentRating = 0.0.obs;
+  // Danh sách các đánh giá cho một sản phẩm cụ thể đang xem
+  final RxList<Review> productReviews = <Review>[].obs;
+  // Danh sách tất cả đánh giá (cho admin)
+  final RxList<Review> allReviewsAdminList = <Review>[].obs;
+  // Đánh giá đang được xem chi tiết (ví dụ: bởi admin)
+  final Rx<Review?> selectedReviewDetail = Rx<Review?>(null);
+
+
+  // State cho việc tạo/cập nhật review
+  final RxDouble currentRating = 0.0.obs; // Rating người dùng chọn (1.0 đến 5.0)
   final commentController = TextEditingController();
 
-  // Lấy đánh giá cho một sản phẩm cụ thể
+  /// Lấy tất cả đánh giá cho một sản phẩm (Public)
   Future<void> fetchProductReviews(String productId) async {
     try {
       isLoading.value = true;
       error.value = '';
-      productReviews.clear(); // Xóa list cũ trước khi fetch
-
-      final reviewListJson = await _reviewService.getProductReviews(productId);
-      productReviews.value = reviewListJson
-          .map((item) => Review.fromJson(item as Map<String, dynamic>))
-          .toList();
+      productReviews.clear();
+      final reviewList = await _reviewService.getProductReviews(productId);
+      productReviews.assignAll(reviewList);
     } catch (e) {
+      print("[ReviewController] fetchProductReviews Error: $e");
       error.value = e.toString();
-      Loaders.errorSnackBar(title: 'Lỗi', message: "Không thể tải đánh giá: ${e.toString()}");
+      Loaders.errorSnackBar(title: 'Lỗi tải đánh giá', message: e.toString());
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Lấy các đánh giá của người dùng hiện tại
-  Future<void> fetchUserReviews() async {
-    try {
-      isLoading.value = true;
-      error.value = '';
-      userReviewsList.clear();
-
-      final reviewListJson = await _reviewService.getUserReviews();
-      userReviewsList.value = reviewListJson
-          .map((item) => Review.fromJson(item as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      error.value = e.toString();
-      Loaders.errorSnackBar(title: 'Lỗi', message: "Không thể tải đánh giá của bạn: ${e.toString()}");
-    } finally {
-      isLoading.value = false;
+  /// Tạo một đánh giá mới cho sản phẩm
+  Future<bool> submitNewReview({required String productId}) async {
+    if (!_authController.isLoggedIn.value) {
+      Loaders.errorSnackBar(title: 'Lỗi', message: 'Vui lòng đăng nhập để gửi đánh giá.');
+      return false;
     }
-  }
-
-  // Tạo một đánh giá mới
-  Future<void> createReview({
-    required String productId,
-    // rating và comment sẽ lấy từ currentRating.value và commentController.text
-  }) async {
-    if (currentRating.value == 0.0) {
-      Loaders.warningSnackBar(title: 'Chưa chọn sao', message: 'Vui lòng chọn số sao đánh giá.');
-      return;
+    if (currentRating.value < 1.0 || currentRating.value > 5.0) {
+      Loaders.warningSnackBar(title: 'Chưa chọn sao', message: 'Vui lòng chọn từ 1 đến 5 sao.');
+      return false;
     }
-    if (commentController.text.isEmpty) {
-      Loaders.warningSnackBar(title: 'Chưa nhập bình luận', message: 'Vui lòng nhập bình luận của bạn.');
-      return;
+    if (commentController.text.trim().isEmpty) {
+      Loaders.warningSnackBar(title: 'Thiếu bình luận', message: 'Vui lòng nhập bình luận của bạn.');
+      return false;
     }
 
     try {
       isLoading.value = true;
       error.value = '';
-
-      final reviewData = await _reviewService.createReview(
+      await _reviewService.createReview(
         productId: productId,
         rating: currentRating.value.toInt(),
-        comment: commentController.text,
+        comment: commentController.text.trim(),
       );
-      // final newReview = Review.fromJson(reviewData['data'] as Map<String, dynamic>);
-      // productReviews.insert(0, newReview); // Thêm review mới vào đầu danh sách để hiển thị ngay
-
-      // Sau khi tạo review thành công:
       Loaders.successSnackBar(title: 'Thành công', message: 'Đánh giá của bạn đã được gửi.');
       await fetchProductReviews(productId); // Tải lại danh sách review cho sản phẩm
-      // Cập nhật lại thông tin rating trung bình và số lượng review của sản phẩm đó
-      // Điều này quan trọng nếu ProductModel không tự cập nhật từ server ngay lập tức
-      await productController.fetchProductsByCategoryId(productId); // Fetch lại product để cập nhật rating, numReviews
-
-      // Reset form
+      // TODO: Cân nhắc cập nhật rating trung bình của sản phẩm ở ProductController
+      // await _productController.fetchProductDetails(productId); // Ví dụ
       resetReviewForm();
-      Get.back(); // Đóng dialog/modal sau khi gửi
+      Get.back(); // Đóng dialog/modal nếu có
+      return true;
     } catch (e) {
+      print("[ReviewController] submitNewReview Error: $e");
       error.value = e.toString();
-      Loaders.errorSnackBar(title: 'Lỗi', message: "Không thể gửi đánh giá: ${e.toString()}");
+      Loaders.errorSnackBar(title: 'Lỗi gửi đánh giá', message: e.toString());
+      return false;
     } finally {
       isLoading.value = false;
     }
   }
 
-  void resetReviewForm() {
-      currentRating.value = 0.0;
-      commentController.clear();
+  /// Cập nhật một đánh giá hiện có (chỉ chủ sở hữu)
+  Future<bool> updateExistingReview({
+    required String reviewId,
+    required String productIdToRefresh, // Cần để fetch lại reviews cho sản phẩm đó
+    // rating và comment sẽ lấy từ currentRating.value và commentController.text
+    // khi người dùng chỉnh sửa
+  }) async {
+     if (!_authController.isLoggedIn.value) {
+      Loaders.errorSnackBar(title: 'Lỗi', message: 'Vui lòng đăng nhập.');
+      return false;
+    }
+    if (currentRating.value < 1.0 || currentRating.value > 5.0) {
+      Loaders.warningSnackBar(title: 'Chưa chọn sao', message: 'Vui lòng chọn từ 1 đến 5 sao.');
+      return false;
+    }
+    if (commentController.text.trim().isEmpty) {
+      Loaders.warningSnackBar(title: 'Thiếu bình luận', message: 'Vui lòng nhập bình luận của bạn.');
+      return false;
+    }
+    try {
+      isLoading.value = true;
+      error.value = '';
+      await _reviewService.updateReview(
+        reviewId: reviewId,
+        rating: currentRating.value.toInt(),
+        comment: commentController.text.trim(),
+      );
+      Loaders.successSnackBar(title: 'Thành công', message: 'Đánh giá của bạn đã được cập nhật.');
+      await fetchProductReviews(productIdToRefresh);
+      // TODO: Cân nhắc cập nhật rating trung bình của sản phẩm
+      resetReviewForm();
+      Get.back();
+      return true;
+    } catch (e) {
+      print("[ReviewController] updateExistingReview Error: $e");
+      error.value = e.toString();
+      Loaders.errorSnackBar(title: 'Lỗi cập nhật đánh giá', message: e.toString());
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
   }
 
-  // TODO: Implement updateReview and deleteReview methods
-  // Future<void> updateReview(String reviewId, {int? rating, String? comment}) async { ... }
-  // Future<void> deleteReview(String reviewId) async { ... }
 
-  // Tính toán rating trung bình từ danh sách ReviewModel
-  double calculateAverageRating(List<Review> reviews) {
+  /// Xóa một đánh giá (Admin hoặc chủ sở hữu - phụ thuộc vào backend và quyền của user)
+  Future<void> deleteUserReview(String reviewId, String productIdToRefresh) async {
+     if (!_authController.isLoggedIn.value) {
+      Loaders.errorSnackBar(title: 'Lỗi', message: 'Vui lòng đăng nhập.');
+      return;
+    }
+    // Logic kiểm tra quyền (ví dụ: review.userId == _authController.currentUser.value?.id || _authController.currentUser.value?.isAdmin == true)
+    // nên được thực hiện ở UI trước khi gọi hàm này, hoặc dựa vào lỗi từ backend.
+    try {
+      isLoading.value = true;
+      error.value = '';
+      await _reviewService.deleteReview(reviewId);
+      Loaders.successSnackBar(title: 'Thành công', message: 'Đánh giá đã được xóa.');
+      await fetchProductReviews(productIdToRefresh); // Tải lại danh sách
+      // TODO: Cân nhắc cập nhật rating trung bình của sản phẩm
+    } catch (e) {
+      print("[ReviewController] deleteUserReview Error: $e");
+      error.value = e.toString();
+      Loaders.errorSnackBar(title: 'Lỗi xóa đánh giá', message: e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+
+  /// Reset form nhập review
+  void resetReviewForm() {
+    currentRating.value = 0.0;
+    commentController.clear();
+  }
+
+  // --- Chức năng cho Admin ---
+
+  /// Admin: Lấy tất cả đánh giá trong hệ thống
+  Future<void> fetchAllReviewsForAdmin() async {
+    // TODO: Kiểm tra quyền admin
+    // if(!_authController.currentUser.value?.isAdmin == true) {
+    //   Loaders.errorSnackBar(title: 'Lỗi', message: 'Bạn không có quyền truy cập.');
+    //   return;
+    // }
+    try {
+      isLoading.value = true;
+      error.value = '';
+      allReviewsAdminList.clear();
+      final reviewList = await _reviewService.getAllReviewsAdmin();
+      allReviewsAdminList.assignAll(reviewList);
+    } catch (e) {
+      print("[ReviewController] fetchAllReviewsForAdmin Error: $e");
+      error.value = e.toString();
+      Loaders.errorSnackBar(title: 'Lỗi tải tất cả đánh giá', message: e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Admin: Lấy chi tiết một đánh giá bằng ID
+  Future<void> fetchReviewDetailsForAdmin(String reviewId) async {
+    // TODO: Kiểm tra quyền admin
+    try {
+      isLoading.value = true;
+      error.value = '';
+      selectedReviewDetail.value = null;
+      final review = await _reviewService.getReviewById(reviewId);
+      selectedReviewDetail.value = review;
+    } catch (e) {
+      print("[ReviewController] fetchReviewDetailsForAdmin Error: $e");
+      error.value = e.toString();
+      Loaders.errorSnackBar(title: 'Lỗi tải chi tiết đánh giá', message: e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Admin: Thay đổi trạng thái publish/report của một đánh giá
+  Future<void> toggleReviewPublishStatusAdmin(String reviewId) async {
+    // TODO: Kiểm tra quyền admin
+    try {
+      isLoading.value = true;
+      error.value = '';
+      final updatedReview = await _reviewService.togglePublishStatusAdmin(reviewId);
+      // Cập nhật trong danh sách allReviewsAdminList
+      int index = allReviewsAdminList.indexWhere((r) => r.id == reviewId);
+      if (index != -1) {
+        allReviewsAdminList[index] = updatedReview;
+      }
+      // Cập nhật trong selectedReviewDetail nếu đang xem
+      if (selectedReviewDetail.value?.id == reviewId) {
+        selectedReviewDetail.value = updatedReview;
+      }
+      Loaders.successSnackBar(title: 'Thành công', message: 'Trạng thái đánh giá đã được thay đổi.');
+    } catch (e) {
+      print("[ReviewController] toggleReviewPublishStatusAdmin Error: $e");
+      error.value = e.toString();
+      Loaders.errorSnackBar(title: 'Lỗi thay đổi trạng thái', message: e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // --- Helper Methods ---
+  double calculateAverageRatingFromList(List<Review> reviews) {
     if (reviews.isEmpty) return 0.0;
     double totalRating = reviews.fold(0, (sum, review) => sum + review.rating);
     return totalRating / reviews.length;
   }
 
-  // Helper method để format ngày tháng (ví dụ)
   String formatReviewDate(DateTime date) {
-    return HelperFunctions.getFormattedDate(date); // Cần import 'package:intl/intl.dart';
+    return HelperFunctions.getFormattedDate(date);
   }
 }

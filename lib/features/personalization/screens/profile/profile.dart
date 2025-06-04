@@ -5,7 +5,6 @@ import 'package:flutter_application_jin/features/personalization/controllers/use
 import 'package:flutter_application_jin/features/personalization/screens/profile/widgets/change_profile.dart';
 import 'package:flutter_application_jin/features/personalization/screens/profile/widgets/change_password.dart';
 import 'package:flutter_application_jin/features/personalization/screens/profile/widgets/profile_menu.dart';
-import 'package:flutter_application_jin/utils/constants/colors.dart';
 import 'package:flutter_application_jin/utils/constants/images.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
 import 'package:get/get.dart';
@@ -38,17 +37,24 @@ class ProfileScreen extends StatelessWidget {
                 width: double.infinity,
                 child: Column(
                   children: [
-                    Obx(
-                      () => CircularImage(
-                        image: controller.getAvatarUrl().isNotEmpty
-                            ? controller.getAvatarUrl()
-                            : Images.user,
+                    Obx(() {
+                      final avatarUrl = controller.getAvatarUrl();
+                      final isValidNetworkUrl = avatarUrl.isNotEmpty && 
+                                               (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'));
+                      
+                      return CircularImage(
+                        image: isValidNetworkUrl ? avatarUrl : Images.user,
+                        isNetworkImage: isValidNetworkUrl,
                         width: 80,
                         height: 80,
-                      ),
-                    ),
+                        padding: 0,
+                      );
+                    }),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        // TODO: Implement image picker functionality
+                        _showImagePickerDialog(context, controller);
+                      },
                       child: const Text('Thay đổi ảnh đại diện'),
                     ),
                   ],
@@ -65,28 +71,37 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: AppSizes.spaceBtwItems),
 
               // Profile Menu Items
-              Obx(() => Column(
-                children: [
-                  ProfileMenu(
-                    onTap: () => Get.to(() => const ChangeProfile()),
-                    title: 'Họ và tên',
-                    value: controller.getFormattedName(),
-                    icon: Iconsax.user,
-                  ),
-                  ProfileMenu(
-                    onTap: () {},
-                    title: 'Email',
-                    value: controller.currentUser.value?.email ?? '',
-                    icon: Iconsax.direct,
-                  ),
-                  ProfileMenu(
-                    onTap: () => Get.to(() => const ChangeProfile()),
-                    title: 'Số điện thoại',
-                    value: controller.getPhone(),
-                    icon: Iconsax.call,
-                  ),
-                ],
-              )),
+              Obx(() {
+                // Show loading if user data is being fetched
+                if (controller.isLoading.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    ProfileMenu(
+                      onTap: () => Get.to(() => const ChangeProfile()),
+                      title: 'Họ và tên',
+                      value: _getDisplayValue(controller.getFormattedName()),
+                      icon: Iconsax.user,
+                    ),
+                    ProfileMenu(
+                      onTap: () {},
+                      title: 'Email',
+                      value: _getDisplayValue(controller.currentUser.value?.email ?? ''),
+                      icon: Iconsax.direct,
+                    ),
+                    ProfileMenu(
+                      onTap: () => Get.to(() => const ChangeProfile()),
+                      title: 'Số điện thoại',
+                      value: _getDisplayValue(controller.getPhone()),
+                      icon: Iconsax.call,
+                    ),
+                  ],
+                );
+              }),
 
               const SizedBox(height: AppSizes.spaceBtwSections),
               const Divider(),
@@ -106,52 +121,68 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: AppSizes.spaceBtwSections),
               const Divider(),
               const SizedBox(height: AppSizes.spaceBtwItems),
-
-              // Danger Zone
-              const Sectionheading(
-                title: 'Nguy hiểm',
-                showActionButton: false,
-              ),
-              const SizedBox(height: AppSizes.spaceBtwItems),
-
-              ProfileMenu(
-                onTap: () {
-                  // Show delete account confirmation dialog
-                  Get.defaultDialog(
-                    title: 'Xóa tài khoản',
-                    titleStyle: Theme.of(context).textTheme.headlineSmall,
-                    content: const Padding(
-                      padding: EdgeInsets.all(AppSizes.md),
-                      child: Text(
-                        'Bạn có chắc chắn muốn xóa tài khoản? Hành động này không thể hoàn tác.',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    confirm: ElevatedButton(
-                      onPressed: () {
-                        // Handle delete account
-                        Get.back();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Xóa tài khoản'),
-                    ),
-                    cancel: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      child: const Text('Hủy'),
-                    ),
-                  );
-                },
-                title: 'Xóa tài khoản',
-                value: '',
-                icon: Iconsax.trash,
-              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Helper method to display fallback text for empty values
+  String _getDisplayValue(String value) {
+    return value.isNotEmpty ? value : 'Chưa cập nhật';
+  }
+
+  /// Show dialog for image picker options
+  void _showImagePickerDialog(BuildContext context, UserController controller) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Thay đổi ảnh đại diện'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Chụp ảnh'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Implement camera functionality
+                  _pickImageFromCamera(controller);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Chọn từ thư viện'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Implement gallery functionality
+                  _pickImageFromGallery(controller);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Hủy'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _pickImageFromCamera(UserController controller) {
+    // TODO: Implement camera image picker
+    // You'll need to add image_picker package and implement this
+    print('Pick image from camera');
+  }
+
+  void _pickImageFromGallery(UserController controller) {
+    // TODO: Implement gallery image picker
+    // You'll need to add image_picker package and implement this
+    print('Pick image from gallery');
   }
 }
