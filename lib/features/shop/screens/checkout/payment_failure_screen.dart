@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
-import 'package:flutter_application_jin/utils/constants/colors.dart';
 
 class PaymentFailureScreen extends StatelessWidget {
   const PaymentFailureScreen({super.key});

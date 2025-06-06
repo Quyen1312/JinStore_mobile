@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_jin/common/widgets/products/cart/cart_item.dart'; // Đã sửa để nhận DisplayCartItem
 import 'package:flutter_application_jin/features/shop/controllers/cart_controller.dart';
-// Import DisplayCartItem. Nó có thể được định nghĩa trong cart_service.dart hoặc file riêng.
 import 'package:flutter_application_jin/service/cart_service.dart' show DisplayCartItem;
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
-import 'package:flutter_application_jin/utils/constants/colors.dart';
-import 'package:flutter_application_jin/utils/popups/loaders.dart';
 import 'package:get/get.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart'; // Cho icon xóa
-import 'package:intl/intl.dart'; // For currency formatting
+import 'package:iconsax_flutter/iconsax_flutter.dart'; 
 
 class CartItems extends StatelessWidget {
   const CartItems({
@@ -44,10 +39,6 @@ class CartItems extends StatelessWidget {
       }
 
       if (items.isEmpty) {
-        // Nếu CartItems được thiết kế để là phần chính của màn hình giỏ hàng,
-        // bạn có thể hiển thị thông báo giỏ hàng trống ở đây.
-        // Tuy nhiên, nếu CartScreen (widget cha) đã xử lý việc này,
-        // thì CartItems chỉ cần không hiển thị gì.
         return const SizedBox.shrink();
       }
 
@@ -157,49 +148,55 @@ class CartItems extends StatelessWidget {
                             ),
                             const SizedBox(height: AppSizes.xs),
                             // Hiển thị giá
-                            Row(
-                              children: [
-                                // Giá sau giảm (nổi bật)
-                                Text(
-                                  formatCurrency(displayItem.discountPrice),
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                ),
-                                if (displayItem.discount != null && displayItem.discount! > 0) ...[
-                                  const SizedBox(width: AppSizes.xs),
-                                  // Giá gốc bị gạch
-                                  Text(
-                                    formatCurrency(displayItem.price),
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      decoration: TextDecoration.lineThrough,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSizes.xs),
-                                  // Phần trăm giảm giá
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSizes.xs,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      '-${displayItem.discount!.toStringAsFixed(0)}%',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
+Row(
+  children: [
+    // Giá sau giảm (nổi bật)
+    Flexible(
+      child: Text(
+        formatCurrency(displayItem.discountPrice),
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).primaryColor,
+        ),
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
+    if (displayItem.discount != null && displayItem.discount! > 0) ...[
+      const SizedBox(width: AppSizes.xs),
+      // Giá gốc bị gạch
+      Flexible(
+        child: Text(
+          formatCurrency(displayItem.price),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            decoration: TextDecoration.lineThrough,
+            color: Colors.grey,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      const SizedBox(width: AppSizes.xs),
+      // Phần trăm giảm giá
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSizes.xs,
+          vertical: 2,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          '-${displayItem.discount!.toStringAsFixed(0)}%',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    ],
+  ],
+),
                             if (displayItem.unit != null) ...[
                               const SizedBox(height: AppSizes.xs / 2),
                               Text(

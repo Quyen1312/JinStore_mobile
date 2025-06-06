@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_jin/common/widgets/appbar/appbar.dart';
 import 'package:flutter_application_jin/common/widgets/layouts/grid_layout.dart';
+import 'package:flutter_application_jin/common/widgets/products/cart/cart_menu_icon.dart';
 import 'package:flutter_application_jin/common/widgets/products/product_cards/product_card_vertical.dart';
 import 'package:flutter_application_jin/common/widgets/shimmer/vertical_product_shimmer.dart';
 import 'package:flutter_application_jin/features/shop/controllers/product_controller.dart';
@@ -385,6 +386,8 @@ class _AllProductScreenState extends State<AllProductScreen> {
         ),
         showBackArrow: true,
         actions: [
+          // Thêm icon giỏ hàng
+          const CartCounterIcon(),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _retry,
@@ -490,41 +493,54 @@ class _AllProductScreenState extends State<AllProductScreen> {
     );
   }
 
-  /// Show sort options
+  /// Show sort options - Fixed overflow issue
   void _showSortOptions() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(AppSizes.defaultSpace),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.grey,
-                borderRadius: BorderRadius.circular(2),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.8,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          padding: const EdgeInsets.all(AppSizes.defaultSpace),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Sắp xếp theo',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 20),
+              Text(
+                'Sắp xếp theo',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            _buildSortOption('name', 'Tên A-Z', Icons.sort_by_alpha),
-            _buildSortOption('price_low_high', 'Giá thấp đến cao', Icons.trending_up),
-            _buildSortOption('price_high_low', 'Giá cao đến thấp', Icons.trending_down),
-            _buildSortOption('discount', 'Giảm giá nhiều nhất', Icons.local_offer),
-            _buildSortOption('newest', 'Mới nhất', Icons.fiber_new),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    _buildSortOption('name', 'Tên A-Z', Icons.sort_by_alpha),
+                    _buildSortOption('price_low_high', 'Giá thấp đến cao', Icons.trending_up),
+                    _buildSortOption('price_high_low', 'Giá cao đến thấp', Icons.trending_down),
+                    _buildSortOption('discount', 'Giảm giá nhiều nhất', Icons.local_offer),
+                    _buildSortOption('newest', 'Mới nhất', Icons.fiber_new),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -556,48 +572,64 @@ class _AllProductScreenState extends State<AllProductScreen> {
     );
   }
 
-  /// Show filter options
+  /// Show filter options - Fixed overflow issue
   void _showFilterOptions() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(AppSizes.defaultSpace),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.grey,
-                borderRadius: BorderRadius.circular(2),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          padding: const EdgeInsets.all(AppSizes.defaultSpace),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Bộ lọc',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 20),
+              Text(
+                'Bộ lọc',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            _buildFilterOption('in_stock', 'Còn hàng', Icons.inventory),
-            _buildFilterOption('on_sale', 'Đang giảm giá', Icons.local_offer),
-            const Divider(),
-            Text(
-              'Khoảng giá',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    _buildFilterOption('in_stock', 'Còn hàng', Icons.inventory),
+                    _buildFilterOption('on_sale', 'Đang giảm giá', Icons.local_offer),
+                    const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Text(
+                        'Khoảng giá',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    _buildFilterOption('price_low', 'Dưới 100.000đ', Icons.attach_money),
+                    _buildFilterOption('price_medium', '100.000đ - 500.000đ', Icons.attach_money),
+                    _buildFilterOption('price_high', 'Trên 500.000đ', Icons.attach_money),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
-            ),
-            _buildFilterOption('price_low', 'Dưới 100.000đ', Icons.attach_money),
-            _buildFilterOption('price_medium', '100.000đ - 500.000đ', Icons.attach_money),
-            _buildFilterOption('price_high', 'Trên 500.000đ', Icons.attach_money),
-            const SizedBox(height: 20),
-          ],
+            ],
+          ),
         ),
       ),
     );

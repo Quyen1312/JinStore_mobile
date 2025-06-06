@@ -7,7 +7,6 @@ import 'package:flutter_application_jin/utils/constants/sizes.dart';
 import 'package:flutter_application_jin/utils/helpers/helper_functions.dart';
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:intl/intl.dart';
 
 // Import cần thiết cho CartController
 import 'package:flutter_application_jin/features/shop/controllers/cart_controller.dart';
@@ -20,8 +19,10 @@ class ProductCardVertical extends StatelessWidget {
 
   // Helper method để format giá tiền
   String formatPrice(double price) {
-    final formatter = NumberFormat('#,###', 'vi_VN');
-    return '\$${formatter.format(price)}';
+    return '${price.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), 
+      (Match m) => '${m[1]},'
+    )}đ';
   }
 
   // Helper method để tính giá sau discount
@@ -130,7 +131,7 @@ class ProductCardVertical extends StatelessWidget {
 
                     // -- Product Description (Very compact)
                     Text(
-                      product.description ?? 'Sản phẩm chất lượng cao',
+                      product.description,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.textSecondary,
                         fontSize: 11,
@@ -192,9 +193,6 @@ class ProductCardVertical extends StatelessWidget {
                           }
                         : () {
                             cartController.addItemToCart(product, quantity: 1);
-                            Loaders.successSnackBar(
-                                title: 'Thành công!',
-                                message: '${product.name} đã được thêm vào giỏ hàng.');
                           },
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(AppSizes.cardRadiusMd),

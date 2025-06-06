@@ -13,7 +13,7 @@ class Loaders {
     ScaffoldMessenger.of(Get.context!).showSnackBar(
       SnackBar(
         elevation: 0,
-        duration: const Duration(seconds: 1),
+        duration: const Duration(milliseconds: 500),
         backgroundColor: Colors.transparent,
         content: Container(
           padding: const EdgeInsets.all(12.0),
@@ -32,7 +32,7 @@ class Loaders {
     );
   }
 
-  static successSnackBar({required title, message = '', duration = 1}) {
+  static successSnackBar({required title, message = '',int duration = 500}) {
     Get.snackbar(
       title,
       message,
@@ -41,7 +41,7 @@ class Loaders {
       colorText: Colors.white,
       backgroundColor: AppColors.primary,
       snackPosition: SnackPosition.BOTTOM,
-      duration: Duration(seconds: duration),
+      duration: Duration(milliseconds: duration),
       margin: const EdgeInsets.all(10),
       icon: const Icon(Iconsax.check, color: AppColors.white),
     );
@@ -56,7 +56,7 @@ class Loaders {
       colorText: AppColors.white,
       backgroundColor: Colors.orange,
       snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 500),
       margin: const EdgeInsets.all(20),
       icon: const Icon(Iconsax.warning_2, color: AppColors.white),
     );
@@ -71,7 +71,7 @@ class Loaders {
       colorText: AppColors.white,
       backgroundColor: Colors.red.shade600,
       snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 500),
       margin: const EdgeInsets.all(20),
       icon: const Icon(Iconsax.warning_2, color: AppColors.white),
     );

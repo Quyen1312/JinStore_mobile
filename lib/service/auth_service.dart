@@ -437,13 +437,13 @@ class AuthService extends GetxService {
     throw Exception('Request failed after $maxRetries retries');
   }
 
-  /// Đăng nhập với Google
-  Future<Map<String, dynamic>> loginWithGoogle({
+  /// ✅ FIXED: Đăng nhập với Google - Return User object
+  Future<User> loginWithGoogle({
     required String idToken,
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/mobile/google-login'), // ✅ FIX: đúng endpoint name
+        Uri.parse('$_baseUrl/mobile/google-login'),
         headers: _headers,
         body: jsonEncode({
           'idToken': idToken,
@@ -463,7 +463,7 @@ class AuthService extends GetxService {
           await _saveRefreshToken(data['refreshToken'] as String);
         }
 
-        // Lưu thông tin user nếu có
+        // ✅ FIXED: Parse user data và return User object
         if (data['_id'] != null) {
           final userData = Map<String, dynamic>.from(data);
           userData.remove('accessToken');
@@ -471,9 +471,13 @@ class AuthService extends GetxService {
           
           final user = User.fromJson(userData);
           await _saveUserData(user);
+          
+          print('✅ Google login thành công: ${user.email}');
+          // ✅ Return User object thay vì Map
+          return user;
+        } else {
+          throw Exception('Invalid user data from backend');
         }
-
-        return data;
       }
       throw _handleError(response, "Đăng nhập Google thất bại");
     } catch (e) {

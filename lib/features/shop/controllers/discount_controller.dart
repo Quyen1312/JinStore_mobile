@@ -131,10 +131,6 @@ class DiscountController extends GetxController {
       // Áp dụng discount local
       selectedDiscountForCart.value = discount;
       calculatedDiscountAmountForCart.value = discount.calculateDiscountAmount(originalCartAmount);
-      
-      Loaders.successSnackBar(
-          title: 'Thành công', 
-          message: 'Đã chọn mã giảm giá: ${discount.code}');
     } catch (e) {
       print("[DiscountController] selectDiscountForCart Error: $e");
       selectedDiscountForCart.value = null;

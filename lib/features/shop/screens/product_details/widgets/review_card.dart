@@ -243,7 +243,7 @@ class ReviewCardWithContextWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = HelperFunctions.isDarkMode(context);
-    final userName = user?.username ?? 'Người dùng ẩn danh';
+    final userName = user?.username;
     final userAvatarUrl = user?.avatar.url ?? '';
     final bool hasUserAvatar = userAvatarUrl.isNotEmpty && userAvatarUrl != '';
     final bool isOwnReview = currentUserId != null && review.userId == currentUserId;
@@ -282,7 +282,7 @@ class ReviewCardWithContextWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        userName,
+                        userName!,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

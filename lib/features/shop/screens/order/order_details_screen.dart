@@ -5,6 +5,7 @@ import 'package:flutter_application_jin/common/widgets/custom_shapes/containers/
 import 'package:flutter_application_jin/features/shop/controllers/order_controller.dart';
 import 'package:flutter_application_jin/features/shop/controllers/cart_controller.dart';
 import 'package:flutter_application_jin/features/shop/models/order_model.dart';
+import 'package:flutter_application_jin/features/shop/screens/product_details/product_detail.dart'; // ✅ NEW: Import ProductDetailScreen
 import 'package:flutter_application_jin/utils/constants/colors.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
 import 'package:flutter_application_jin/utils/helpers/helper_functions.dart';
@@ -112,14 +113,14 @@ class OrderDetailsScreen extends StatelessWidget {
             const SizedBox(height: AppSizes.spaceBtwSections),
 
             // Shipping & Payment Info
-            _buildShippingPaymentInfo(context, dark, order),
+            _buildShippingPaymentInfo(context, dark, order, controller),
             const SizedBox(height: AppSizes.spaceBtwSections),
 
             // Order Summary
             _buildOrderSummary(context, dark, order),
             const SizedBox(height: AppSizes.spaceBtwSections),
 
-            // Action Buttons
+            // ✅ FIXED: Action Buttons - No cancel button
             _buildActionButtons(context, order, controller),
           ],
         ),
@@ -127,8 +128,9 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
+  // ✅ FIXED: Order header với status display chính xác
   Widget _buildOrderHeader(BuildContext context, bool dark, OrderModel order, OrderController controller) {
-    final statusColor = _getStatusColor(controller.getOrderStatusColor(order.status));
+    final statusColor = _getStatusColor(order.status);
     
     return RoundedContainer(
       showBorder: true,
@@ -160,7 +162,7 @@ class OrderDetailsScreen extends StatelessWidget {
                   children: [
                     Icon(_getStatusIcon(order.status), color: statusColor, size: 16),
                     const SizedBox(width: AppSizes.xs),
-                    Text(controller.getOrderStatusText(order.status), 
+                    Text(_getStatusText(order.status), 
                          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: statusColor, fontWeight: FontWeight.w600)),
                   ],
                 ),
@@ -174,9 +176,13 @@ class OrderDetailsScreen extends StatelessWidget {
             children: [
               _buildQuickInfo(context, 'Ngày đặt', HelperFunctions.getFormattedDate(order.createdAt), Iconsax.calendar),
               const SizedBox(width: AppSizes.spaceBtwItems),
-              _buildQuickInfo(context, 'Thanh toán', order.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán', 
-                              order.isPaid ? Iconsax.tick_circle : Iconsax.clock, 
-                              valueColor: order.isPaid ? Colors.green : Colors.orange),
+              _buildQuickInfo(
+                context, 
+                'Thanh toán', 
+                order.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán', 
+                order.isPaid ? Iconsax.tick_circle : Iconsax.clock, 
+                valueColor: order.isPaid ? Colors.green : Colors.orange
+              ),
             ],
           ),
         ],
@@ -278,12 +284,10 @@ class OrderDetailsScreen extends StatelessWidget {
               ),
             ),
             
-            // Actions
+            // Actions - ✅ REMOVED: Arrow icon, only show review button
             Column(
               children: [
-                Icon(Iconsax.arrow_right_3, size: 16, color: Theme.of(context).primaryColor),
                 if (canReview) ...[
-                  const SizedBox(height: 8),
                   GestureDetector(
                     onTap: () => _navigateToReview(item, order),
                     child: Container(
@@ -312,7 +316,7 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildShippingPaymentInfo(BuildContext context, bool dark, OrderModel order) {
+  Widget _buildShippingPaymentInfo(BuildContext context, bool dark, OrderModel order, OrderController controller) {
     return RoundedContainer(
       showBorder: true,
       padding: const EdgeInsets.all(AppSizes.md),
@@ -370,6 +374,10 @@ class OrderDetailsScreen extends StatelessWidget {
     final subtotal = order.orderItems.fold<double>(0, (total, item) => total + (item.price * item.quantity));
     final discountAmount = order.discountId != null ? subtotal + order.shippingFee - order.totalAmount : 0.0;
     
+    // Free shipping logic
+    const double freeShippingThreshold = 500000.0;
+    final wasFreeShipping = subtotal >= freeShippingThreshold && order.shippingFee == 0;
+    
     return RoundedContainer(
       showBorder: true,
       padding: const EdgeInsets.all(AppSizes.md),
@@ -385,11 +393,41 @@ class OrderDetailsScreen extends StatelessWidget {
           ),
           const SizedBox(height: AppSizes.spaceBtwItems / 2),
           
+          // Shipping fee với free shipping indicator
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Phí vận chuyển', style: Theme.of(context).textTheme.bodyMedium),
-              Text(HelperFunctions.formatCurrency(order.shippingFee), style: Theme.of(context).textTheme.bodyMedium),
+              Row(
+                children: [
+                  Text('Phí vận chuyển', style: Theme.of(context).textTheme.bodyMedium),
+                  if (wasFreeShipping) ...[
+                    const SizedBox(width: AppSizes.xs),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        'MIỄN PHÍ',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              Text(
+                wasFreeShipping ? 'Miễn phí' : HelperFunctions.formatCurrency(order.shippingFee), 
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: wasFreeShipping ? Colors.green : null,
+                  fontWeight: wasFreeShipping ? FontWeight.w600 : null,
+                ),
+              ),
             ],
           ),
           
@@ -420,31 +458,14 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
+  // ✅ FIXED: Action buttons - REMOVED cancel button completely
   Widget _buildActionButtons(BuildContext context, OrderModel order, OrderController controller) {
     final List<Widget> buttons = [];
 
-    // Cancel button
-    if (controller.canUserCancelOrder(order.status)) {
-      buttons.add(
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () => _cancelOrder(order, controller),
-            icon: const Icon(Iconsax.close_circle),
-            label: const Text('Hủy đơn hàng'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-              side: const BorderSide(color: Colors.red),
-              padding: const EdgeInsets.all(AppSizes.md),
-            ),
-          ),
-        ),
-      );
-    }
+    // ✅ REMOVED: Cancel button logic completely removed
 
-    // Mark as received button
-    if (controller.canUserUpdateOrder(order.status)) {
-      if (buttons.isNotEmpty) buttons.add(const SizedBox(height: AppSizes.spaceBtwItems));
+    // Mark as received button - only show when delivered
+    if (order.status.toLowerCase() == 'delivered') {
       buttons.add(
         SizedBox(
           width: double.infinity,
@@ -488,41 +509,94 @@ class OrderDetailsScreen extends StatelessWidget {
   }
 
   void _navigateToProduct(OrderItemModel item, OrderModel order) {
-    Get.toNamed('/product-details', arguments: {
-      'productId': item.productId,
-      'fromOrder': true,
-      'orderId': order.id,
-      'canReview': order.status.toLowerCase() == 'delivered' || order.status.toLowerCase() == 'received',
-    });
+    try {
+      if (item.productDetails != null) {
+        Get.toNamed('/product-detail', arguments: item.productDetails);
+      } else {
+        Get.dialog(
+          AlertDialog(
+            title: const Text('Thông tin sản phẩm'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Thông tin chi tiết sản phẩm không khả dụng.'),
+                const SizedBox(height: AppSizes.spaceBtwItems),
+                Text('Mã sản phẩm: ${item.productId}'),
+                Text('Tên sản phẩm: ${item.displayName}'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('Đóng'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Get.back();
+                  Loaders.warningSnackBar(
+                    title: 'Đang phát triển',
+                    message: 'Tính năng xem chi tiết sản phẩm đang được phát triển.',
+                  );
+                },
+                child: const Text('Tìm sản phẩm'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      Loaders.errorSnackBar(
+        title: 'Lỗi navigation',
+        message: 'Không thể mở trang sản phẩm: ${e.toString()}',
+      );
+    }
   }
 
   void _navigateToReview(OrderItemModel item, OrderModel order) {
-    Get.toNamed('/product-review', arguments: {
-      'productId': item.productId,
-      'orderId': order.id,
-      'productName': item.displayName,
-    });
+    try {
+      // ✅ FIXED: Navigate to product details using Get.to
+      if (item.productDetails != null) {
+        Get.offAll(
+          () => ProductDetailScreen(
+            product: item.productDetails!,
+          ),
+          transition: Transition.cupertino,
+          duration: const Duration(milliseconds: 300),
+        );
+      } else {
+        // Fallback dialog nếu không có product details
+        Get.dialog(
+          AlertDialog(
+            title: const Text('Đánh giá sản phẩm'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Sản phẩm: ${item.displayName}'),
+                const SizedBox(height: 8),
+                Text('Mã đơn hàng: #${order.id.substring(order.id.length - 8).toUpperCase()}'),
+                const SizedBox(height: 16),
+                const Text('Thông tin sản phẩm không đầy đủ để mở trang chi tiết.'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('Đóng'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      Loaders.errorSnackBar(
+        title: 'Lỗi navigation', 
+        message: 'Không thể mở trang sản phẩm: ${e.toString()}',
+      );
+    }
   }
 
-  void _cancelOrder(OrderModel order, OrderController controller) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Xác nhận hủy đơn hàng'),
-        content: const Text('Bạn có chắc chắn muốn hủy đơn hàng này không?'),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Không')),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              controller.updateExistingOrderStatus(orderId: order.id, newStatus: 'cancelled');
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Hủy đơn hàng'),
-          ),
-        ],
-      ),
-    );
-  }
+  // ✅ REMOVED: _cancelOrder method completely removed
 
   void _markAsReceived(OrderModel order, OrderController controller) {
     Get.dialog(
@@ -629,17 +703,14 @@ class OrderDetailsScreen extends StatelessWidget {
       int successCount = 0;
       int totalItems = order.orderItems.length;
       
-      // Show loading
       Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
       
       for (final item in order.orderItems) {
         try {
-          // If your OrderItemModel has productDetails (ProductModel), use it
           if (item.productDetails != null) {
             await cartController.addItemToCart(item.productDetails!, quantity: item.quantity);
             successCount++;
           } else {
-            // If no productDetails, skip this item
             print('Warning: Product details not available for ${item.displayName}');
           }
         } catch (e) {
@@ -647,7 +718,6 @@ class OrderDetailsScreen extends StatelessWidget {
         }
       }
       
-      // Close loading
       Get.back();
       
       if (successCount > 0) {
@@ -665,7 +735,6 @@ class OrderDetailsScreen extends StatelessWidget {
         );
       }
     } catch (e) {
-      // Close loading if still open
       if (Get.isDialogOpen == true) Get.back();
       
       Loaders.errorSnackBar(
@@ -675,7 +744,28 @@ class OrderDetailsScreen extends StatelessWidget {
     }
   }
 
-  // Helper methods
+  // ✅ FIXED: Helper methods với status display chính xác
+  String _getStatusText(String status) {
+    switch (status.toLowerCase().trim()) {
+      case 'pending':
+        return 'Chờ xác nhận';
+      case 'paid':
+        return 'Đã thanh toán';
+      case 'processing':
+        return 'Đang xử lý';
+      case 'shipping':
+        return 'Đang giao hàng';
+      case 'delivered':
+        return 'Đã giao hàng';
+      case 'received':
+        return 'Đã nhận hàng';
+      case 'cancelled':
+        return 'Đã hủy';
+      default:
+        return 'Không xác định';
+    }
+  }
+
   IconData _getStatusIcon(String status) {
     switch (status.toLowerCase().trim()) {
       case 'pending': return Iconsax.clock;
@@ -689,13 +779,15 @@ class OrderDetailsScreen extends StatelessWidget {
     }
   }
 
-  Color _getStatusColor(String colorName) {
-    switch (colorName.toLowerCase()) {
-      case 'orange': return Colors.orange;
-      case 'green': return Colors.green;
-      case 'blue': return AppColors.info;
-      case 'purple': return AppColors.secondary;
-      case 'red': return AppColors.error;
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase().trim()) {
+      case 'pending': return Colors.orange;
+      case 'paid': return Colors.green;
+      case 'processing': return Colors.blue;
+      case 'shipping': return Colors.purple;
+      case 'delivered': return const Color(0xFF20B2AA); // Teal
+      case 'received': return Colors.green;
+      case 'cancelled': return Colors.red;
       default: return Colors.grey;
     }
   }

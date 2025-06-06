@@ -13,7 +13,6 @@ import 'package:flutter_application_jin/features/shop/controllers/order_controll
 import 'package:flutter_application_jin/features/shop/controllers/discount_controller.dart';
 import 'package:flutter_application_jin/features/personalization/controllers/address_controller.dart';
 import 'package:flutter_application_jin/features/shop/models/order_model.dart';
-import 'package:flutter_application_jin/features/shop/models/discount_model.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:flutter_application_jin/features/shop/screens/checkout/widgets/payment_webview.dart';
 import 'package:flutter_application_jin/features/shop/screens/checkout/widgets/billing_address_section.dart';
@@ -222,15 +221,21 @@ class CheckoutScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSizes.spaceBtwSections),
 
-              // Order Summary - UPDATED with discount calculation
+              // ✅ UPDATED: Order Summary with free shipping logic
               RoundedContainer(
                 showBorder: true,
                 padding: const EdgeInsets.all(AppSizes.md),
                 backgroundColor: dark ? AppColors.dark : AppColors.white,
                 child: Obx(() {
                   final subtotal = cartController.cartTotalAmount.value;
-                  final shippingFee = 30000.0;
                   final discountAmount = discountController.calculatedDiscountAmountForCart.value;
+                  
+                  // ✅ NEW: Logic miễn phí ship từ 500k
+                  const double freeShippingThreshold = 500000.0;
+                  const double standardShippingFee = 30000.0;
+                  final shippingFee = subtotal >= freeShippingThreshold ? 0.0 : standardShippingFee;
+                  final isFreeShipping = subtotal >= freeShippingThreshold;
+                  
                   final finalTotal = subtotal + shippingFee - discountAmount;
                   
                   return Column(
@@ -251,20 +256,86 @@ class CheckoutScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSizes.spaceBtwItems),
 
-                      // Shipping Fee
+                      // ✅ UPDATED: Shipping Fee với free shipping indicator
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Phí vận chuyển',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                          Row(
+                            children: [
+                              Text(
+                                'Phí vận chuyển',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              if (isFreeShipping) ...[
+                                const SizedBox(width: AppSizes.xs),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                                  ),
+                                  child: Text(
+                                    'MIỄN PHÍ',
+                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           Text(
-                            formatCurrency(shippingFee),
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            isFreeShipping ? 'Miễn phí' : formatCurrency(shippingFee),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: isFreeShipping ? Colors.green : null,
+                              decoration: isFreeShipping ? TextDecoration.lineThrough : null,
+                              decorationColor: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
+                      
+                      // ✅ NEW: Free shipping progress indicator (nếu chưa đạt)
+                      if (!isFreeShipping) ...[
+                        const SizedBox(height: AppSizes.spaceBtwItems),
+                        Container(
+                          padding: const EdgeInsets.all(AppSizes.sm),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(AppSizes.borderRadiusSm),
+                            border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.local_shipping, color: Colors.blue, size: 16),
+                                  const SizedBox(width: AppSizes.xs),
+                                  Expanded(
+                                    child: Text(
+                                      'Thêm ${formatCurrency(freeShippingThreshold - subtotal)} để được miễn phí ship',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Colors.blue.shade700,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSizes.xs),
+                              LinearProgressIndicator(
+                                value: subtotal / freeShippingThreshold,
+                                backgroundColor: Colors.blue.withOpacity(0.2),
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                       const SizedBox(height: AppSizes.spaceBtwItems),
 
                       // Discount if applied
@@ -361,7 +432,7 @@ class CheckoutScreen extends StatelessWidget {
                         ),
                       ),
                       title: const Text('Thanh toán VNPay'),
-                      subtitle: Text(kIsWeb 
+                      subtitle: const Text(kIsWeb 
                         ? 'Thanh toán qua trang web VNPay' 
                         : 'Thanh toán qua ví điện tử VNPay'),
                       trailing: Obx(() => paymentController.isLoading.value
@@ -704,7 +775,7 @@ class CheckoutScreen extends StatelessWidget {
   }
 
   // ================================================================
-  // VNPAY PAYMENT HANDLER - WITH WEB SUPPORT
+  // VNPAY PAYMENT HANDLER - UPDATED with free shipping logic
   // ================================================================
   
   Future<void> _handleVNPayPayment({
@@ -724,9 +795,9 @@ class CheckoutScreen extends StatelessWidget {
       final addressController = Get.find<AddressController>();
       final selectedAddress = addressController.selectedAddress.value!;
       
-      // 4. Calculate final total with discount
+      // 4. ✅ UPDATED: Calculate shipping fee with free shipping logic
       final subtotal = cartController.cartTotalAmount.value;
-      final shippingFee = 30000.0;
+      final shippingFee = orderController.calculateShippingFee(subtotal);
       final discountAmount = discountController.calculatedDiscountAmountForCart.value;
       final finalTotal = subtotal + shippingFee - discountAmount;
       
@@ -742,7 +813,7 @@ class CheckoutScreen extends StatelessWidget {
       final order = await orderController.processNewOrder(
         orderItems: orderItems,
         shippingAddress: selectedAddress.id,
-        shippingFee: 30000,
+        shippingFee: shippingFee, // ✅ UPDATED: Use calculated shipping fee
         paymentMethod: 'vnpay',
         totalAmount: finalTotal, // Use final total with discount
         source: 'cart',
@@ -875,7 +946,7 @@ class CheckoutScreen extends StatelessWidget {
   }
 
   // ================================================================
-  // COD PAYMENT HANDLER
+  // COD PAYMENT HANDLER - UPDATED with free shipping logic
   // ================================================================
   
   Future<void> _handleCODPayment({
@@ -913,9 +984,9 @@ class CheckoutScreen extends StatelessWidget {
         final addressController = Get.find<AddressController>();
         final selectedAddress = addressController.selectedAddress.value!;
         
-        // 4. Calculate final total with discount
+        // 4. ✅ UPDATED: Calculate shipping fee with free shipping logic
         final subtotal = cartController.cartTotalAmount.value;
-        final shippingFee = 30000.0;
+        final shippingFee = orderController.calculateShippingFee(subtotal);
         final discountAmount = discountController.calculatedDiscountAmountForCart.value;
         final finalTotal = subtotal + shippingFee - discountAmount;
         
@@ -923,7 +994,7 @@ class CheckoutScreen extends StatelessWidget {
         final order = await orderController.processNewOrder(
           orderItems: orderItems,
           shippingAddress: selectedAddress.id,
-          shippingFee: 30000,
+          shippingFee: shippingFee, // ✅ UPDATED: Use calculated shipping fee
           paymentMethod: 'cod',
           totalAmount: finalTotal, // Use final total with discount
           source: 'cart',
@@ -1015,14 +1086,6 @@ class CheckoutScreen extends StatelessWidget {
     discountController.removeSelectedDiscount();
     
     // Show success message
-    Get.snackbar(
-      'Thành công',
-      'Đặt hàng thành công! Cảm ơn bạn đã mua hàng.',
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 1),
-    );
     
     // Navigate to success screen
     Get.offAllNamed('/payment-success');
@@ -1035,7 +1098,7 @@ class CheckoutScreen extends StatelessWidget {
       snackPosition: SnackPosition.TOP,
       backgroundColor: Colors.orange,
       colorText: Colors.white,
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 600),
     );
   }
   
@@ -1082,7 +1145,7 @@ class CheckoutScreen extends StatelessWidget {
       snackPosition: SnackPosition.TOP,
       backgroundColor: Colors.red,
       colorText: Colors.white,
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 600),
       margin: const EdgeInsets.all(16),
     );
   }

@@ -364,7 +364,7 @@ class CartScreen extends StatelessWidget {
                     children: [
                       const Icon(Iconsax.card_copy, size: 20),
                       const SizedBox(width: AppSizes.xs),
-                      Text('Tiến hành thanh toán (${controller.selectedItemsCount})'),
+                      Text('Thanh toán (${controller.selectedItemsCount})'),
                     ],
                   ),
                 ),

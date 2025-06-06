@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
 import 'package:flutter_application_jin/utils/device/device_utility.dart';
-import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class Appbar extends StatelessWidget implements PreferredSizeWidget {
-  const Appbar(
-      {super.key,
-      this.title,
-      this.showBackArrow = false,
-      this.leadingIcon,
-      this.actions,
-      this.leadingOnPressed});
+  const Appbar({
+    super.key,
+    this.title,
+    this.showBackArrow = false,
+    this.leadingIcon,
+    this.actions,
+    this.leadingOnPressed,
+  });
 
   final Widget? title;
   final bool showBackArrow;
@@ -27,11 +27,16 @@ class Appbar extends StatelessWidget implements PreferredSizeWidget {
         automaticallyImplyLeading: false,
         leading: showBackArrow
             ? IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Iconsax.arrow_left))
+                onPressed: () {
+                  // ✅ SIMPLE & SAFE: Clear snackbars then navigate
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Iconsax.arrow_left),
+              )
             : leadingIcon != null
                 ? IconButton(
-                    onPressed: () => leadingOnPressed,
+                    onPressed: leadingOnPressed,
                     icon: Icon(leadingIcon),
                   )
                 : null,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_jin/features/personalization/models/user_model.dart'; // Đảm bảo User model đã được cập nhật với Avatar object
 import 'package:get/get.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:flutter_application_jin/common/widgets/images/circular_image.dart';

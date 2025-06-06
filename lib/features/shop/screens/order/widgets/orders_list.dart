@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_jin/common/widgets/custom_shapes/containers/rounded_container.dart';
 import 'package:flutter_application_jin/features/shop/controllers/order_controller.dart';
-import 'package:flutter_application_jin/features/shop/models/order_model.dart';// Import order details screen
+import 'package:flutter_application_jin/features/shop/models/order_model.dart';
 import 'package:flutter_application_jin/features/shop/screens/order/order_details_screen.dart';
 import 'package:flutter_application_jin/utils/constants/sizes.dart';
 import 'package:flutter_application_jin/utils/helpers/helper_functions.dart';
@@ -39,15 +39,16 @@ class _OrderListItemsState extends State<OrderListItems> {
     });
   }
 
+  // ✅ UPDATED: Status filter tabs để match với backend enum
   Widget _buildStatusFilterTabs(BuildContext context, OrderController controller) {
     final List<Map<String, String>> statusTabs = [
       {'key': 'all', 'label': 'Tất cả'},
       {'key': 'pending', 'label': 'Chờ xác nhận'},
-      {'key': 'paid', 'label': 'Đã thanh toán'},
+      {'key': 'paid', 'label': 'Đã thanh toán'}, // Chỉ cho VNPay
       {'key': 'processing', 'label': 'Đang xử lý'},
       {'key': 'shipping', 'label': 'Đang giao'},
       {'key': 'delivered', 'label': 'Đã giao'},
-      {'key': 'received', 'label': 'Đã nhận'},
+      {'key': 'received', 'label': 'Đã nhận'}, // COD sẽ hiển thị ở đây khi received
       {'key': 'cancelled', 'label': 'Đã hủy'},
     ];
 
@@ -98,7 +99,7 @@ class _OrderListItemsState extends State<OrderListItems> {
     if (status == 'all') {
       controller.fetchMyOrders(); // Fetch all orders
     } else {
-      controller.fetchMyOrders(status: status); // Fetch orders by status
+      controller.fetchMyOrders(status: status); // Fetch orders by status with exact backend enum
     }
   }
 
@@ -183,8 +184,10 @@ class _OrderListItemsState extends State<OrderListItems> {
     );
   }
 
+  // ✅ FIXED: Correct status display and no cancel button
   Widget _buildOrderItem(BuildContext context, bool dark, OrderModel order, OrderController controller) {
-    final statusColor = _getStatusColor(controller.getOrderStatusColor(order.status));
+    // ✅ FIXED: Get correct status color using the proper method
+    final statusColor = _getStatusColor(order.status);
     
     return RoundedContainer(
       showBorder: true,
@@ -216,8 +219,9 @@ class _OrderListItemsState extends State<OrderListItems> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ✅ FIXED: Use correct Vietnamese status text
                     Text(
-                      controller.getOrderStatusText(order.status),
+                      _getStatusText(order.status),
                       style: Theme.of(context).textTheme.bodyLarge!.apply(
                         color: statusColor,
                         fontWeightDelta: 1,
@@ -302,7 +306,7 @@ class _OrderListItemsState extends State<OrderListItems> {
             ],
           ),
 
-          // Row 3: Order Items Count & Payment Method
+          // Row 3: Items & Payment info
           const SizedBox(height: AppSizes.spaceBtwItems / 2),
           Row(
             children: [
@@ -320,7 +324,7 @@ class _OrderListItemsState extends State<OrderListItems> {
                 ),
               ),
               
-              // Payment Method
+              // Payment Method & Status
               Row(
                 children: [
                   Icon(
@@ -328,13 +332,14 @@ class _OrderListItemsState extends State<OrderListItems> {
                         ? Iconsax.card 
                         : Iconsax.money_recive,
                     size: AppSizes.iconSm,
-                    color: order.isPaid ? Colors.green : Colors.orange,
+                    color: _getPaymentStatusColor(order),
                   ),
                   const SizedBox(width: AppSizes.spaceBtwItems / 2),
                   Text(
-                    order.paymentMethod.toUpperCase(),
-                    style: Theme.of(context).textTheme.bodySmall?.apply(
-                      color: order.isPaid ? Colors.green : Colors.orange,
+                    _getPaymentDisplayText(order),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: _getPaymentStatusColor(order),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -342,90 +347,39 @@ class _OrderListItemsState extends State<OrderListItems> {
             ],
           ),
 
-          // Action Buttons (if applicable)
-          if (_shouldShowActionButtons(order, controller))
-            ..._buildActionButtons(context, order, controller),
+          // ✅ REMOVED: Cancel button logic completely removed
+          // Only show "Mark as received" button when applicable
+          if (_shouldShowReceivedButton(order))
+            ..._buildReceivedButton(context, order, controller),
         ],
       ),
     );
   }
 
-  bool _shouldShowActionButtons(OrderModel order, OrderController controller) {
-    return controller.canUserCancelOrder(order.status) || 
-           controller.canUserUpdateOrder(order.status);
+  // ✅ FIXED: Only show received button, no cancel button
+  bool _shouldShowReceivedButton(OrderModel order) {
+    return order.status.toLowerCase() == 'delivered';
   }
 
-  List<Widget> _buildActionButtons(BuildContext context, OrderModel order, OrderController controller) {
-    final buttons = <Widget>[];
-    
-    if (controller.canUserCancelOrder(order.status)) {
-      buttons.add(
-        const SizedBox(height: AppSizes.spaceBtwItems),
-      );
-      buttons.add(
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: () => _cancelOrder(context, order, controller),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-              side: BorderSide(color: Colors.red),
-            ),
-            child: const Text('Hủy đơn hàng'),
+  List<Widget> _buildReceivedButton(BuildContext context, OrderModel order, OrderController controller) {
+    return [
+      const SizedBox(height: AppSizes.spaceBtwItems),
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () => _markAsReceived(context, order, controller),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
           ),
+          child: const Text('Xác nhận đã nhận hàng'),
         ),
-      );
-    }
-    
-    if (controller.canUserUpdateOrder(order.status)) {
-      buttons.add(
-        const SizedBox(height: AppSizes.spaceBtwItems / 2),
-      );
-      buttons.add(
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () => _markAsReceived(context, order, controller),
-            child: const Text('Xác nhận đã nhận hàng'),
-          ),
-        ),
-      );
-    }
-    
-    return buttons;
+      ),
+    ];
   }
 
   void _viewOrderDetails(OrderModel order, OrderController controller) {
-    // Navigate to order details screen with order ID using Get.to()
     Get.to(() => const OrderDetailsScreen(), arguments: order.id);
-  }
-
-  void _cancelOrder(BuildContext context, OrderModel order, OrderController controller) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Xác nhận hủy đơn hàng'),
-        content: const Text('Bạn có chắc chắn muốn hủy đơn hàng này không?'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Không'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              controller.updateExistingOrderStatus(
-                orderId: order.id,
-                newStatus: 'cancelled',
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text('Hủy đơn hàng'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _markAsReceived(BuildContext context, OrderModel order, OrderController controller) {
@@ -453,6 +407,49 @@ class _OrderListItemsState extends State<OrderListItems> {
     );
   }
 
+  // ✅ FIXED: Correct status display methods
+  String _getStatusText(String status) {
+    switch (status.toLowerCase().trim()) {
+      case 'pending':
+        return 'Chờ xác nhận';
+      case 'paid':
+        return 'Đã thanh toán';
+      case 'processing':
+        return 'Đang xử lý';
+      case 'shipping':
+        return 'Đang giao hàng';
+      case 'delivered':
+        return 'Đã giao hàng';
+      case 'received':
+        return 'Đã nhận hàng';
+      case 'cancelled':
+        return 'Đã hủy';
+      default:
+        return 'Không xác định';
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase().trim()) {
+      case 'pending':
+        return Colors.orange;
+      case 'paid':
+        return Colors.green;
+      case 'processing':
+        return Colors.blue;
+      case 'shipping':
+        return Colors.purple;
+      case 'delivered':
+        return const Color(0xFF20B2AA); // Teal
+      case 'received':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   IconData _getStatusIcon(String status) {
     switch (status.toLowerCase().trim()) {
       case 'pending':
@@ -468,36 +465,32 @@ class _OrderListItemsState extends State<OrderListItems> {
       case 'received':
         return Iconsax.verify;
       case 'cancelled':
-      case 'canceled':
         return Iconsax.close_circle;
-      case 'refunded':
-        return Iconsax.refresh;
-      case 'failed':
-        return Iconsax.warning_2;
       default:
         return Iconsax.info_circle;
     }
   }
 
-  Color _getStatusColor(String colorName) {
-    switch (colorName.toLowerCase()) {
-      case 'orange':
-        return Colors.orange;
-      case 'green':
-        return Colors.green;
-      case 'blue':
-        return AppColors.info;
-      case 'purple':
-        return AppColors.secondary;
-      case 'teal':
-        return const Color(0xFF20B2AA);
-      case 'red':
-        return AppColors.error;
-      case 'amber':
-        return const Color(0xFFFFC107);
-      case 'grey':
-      default:
-        return Colors.grey;
+  // ✅ FIXED: Correct payment status display
+  String _getPaymentDisplayText(OrderModel order) {
+    if (order.paymentMethod.toLowerCase() == 'vnpay') {
+      return order.isPaid ? 'VNPay (Đã TT)' : 'VNPay (Chưa TT)';
+    } else {
+      // COD
+      return order.status.toLowerCase() == 'received' 
+          ? 'COD (Đã TT)' 
+          : 'COD';
+    }
+  }
+
+  Color _getPaymentStatusColor(OrderModel order) {
+    if (order.paymentMethod.toLowerCase() == 'vnpay') {
+      return order.isPaid ? Colors.green : Colors.orange;
+    } else {
+      // COD
+      return order.status.toLowerCase() == 'received' 
+          ? Colors.green 
+          : Colors.orange;
     }
   }
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "461324769267",
+    "project_id": "jinstore-f7faa",
+    "storage_bucket": "jinstore-f7faa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:461324769267:android:a82d1cea922461c9032486",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_jin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBdD2loFskVpBJZ84CvA83S6zP-hQR-4tc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

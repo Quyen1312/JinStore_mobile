@@ -12,9 +12,11 @@ class ProductDetailImageSlider extends StatelessWidget {
   const ProductDetailImageSlider({
     super.key,
     required this.product,
+    this.showBackButton = true, // ✅ NEW: Control back button visibility
   });
 
   final ProductModel product;
+  final bool showBackButton; // ✅ NEW: Control back button
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +34,7 @@ class ProductDetailImageSlider extends StatelessWidget {
     print('- Has images: $hasImages');
     print('- Images count: ${product.images?.length ?? 0}');
     print('- Default image URL: $defaultImageUrl');
+    print('- Show back button: $showBackButton');
 
     return CurvedEdgesWidget(
       child: Container(
@@ -95,25 +98,46 @@ class ProductDetailImageSlider extends StatelessWidget {
               ),
             ),
 
-            // -- Back Button
-            Positioned(
-              top: 50,
-              left: 20,
-              child: CircleAvatar(
-                backgroundColor: dark 
-                    ? AppColors.black.withOpacity(0.7) 
-                    : AppColors.white.withOpacity(0.8),
-                child: IconButton(
-                  onPressed: () => Get.back(),
-                  icon: Icon(
-                    Iconsax.arrow_left,
-                    color: dark ? AppColors.white : AppColors.black,
+            // ✅ FIXED: Conditional Back Button
+            if (showBackButton)
+              Positioned(
+                top: 50,
+                left: 20,
+                child: CircleAvatar(
+                  backgroundColor: dark 
+                      ? AppColors.black.withOpacity(0.7) 
+                      : AppColors.white.withOpacity(0.8),
+                  child: IconButton(
+                    onPressed: () => Get.back(),
+                    icon: Icon(
+                      Iconsax.arrow_left,
+                      color: dark ? AppColors.white : AppColors.black,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            // ✅ Fix: Image Slider (thumbnail images) - Sử dụng RoundedImage
+            // ✅ NEW: Home button when no back button
+            if (!showBackButton)
+              Positioned(
+                top: 50,
+                left: 20,
+                child: CircleAvatar(
+                  backgroundColor: dark 
+                      ? AppColors.black.withOpacity(0.7) 
+                      : AppColors.white.withOpacity(0.8),
+                  child: IconButton(
+                    onPressed: () => Get.offAllNamed('/'),
+                    icon: Icon(
+                      Iconsax.home,
+                      color: dark ? AppColors.white : AppColors.black,
+                    ),
+                    tooltip: 'Về trang chủ',
+                  ),
+                ),
+              ),
+
+            // ✅ Fix: Image Slider (thumbnail images)
             if (hasImages && product.images!.length > 1)
               Positioned(
                 right: 0,
